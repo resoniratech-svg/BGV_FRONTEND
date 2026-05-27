@@ -1,7 +1,7 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, CheckCircle, Clock, ExternalLink } from "lucide-react";
+import {  CheckCircle, ExternalLink } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
 
 interface QueueItem {

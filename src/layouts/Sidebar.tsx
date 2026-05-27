@@ -114,7 +114,7 @@ function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           })}
         </div>
       </div>
-      </div>
+      
     </>
   );
 }
