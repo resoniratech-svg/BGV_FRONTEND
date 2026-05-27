@@ -2,7 +2,7 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, CheckCircle, Clock, AlertTriangle, ScanFace, Database, ArrowLeft } from "lucide-react";
+import {  CheckCircle, AlertTriangle, ScanFace, ArrowLeft } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
 
 interface FaceMatchRequest {

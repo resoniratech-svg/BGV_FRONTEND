@@ -1,7 +1,7 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
-import { Search, ShieldCheck, CheckCircle, Clock, AlertTriangle, Cpu, CreditCard, Database } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle,  Database } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
 
 interface PanRequest {

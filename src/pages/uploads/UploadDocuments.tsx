@@ -15,7 +15,7 @@ function UploadDocuments() {
   const navigate = useNavigate();
 
   // 1. Read the exact same data source as the rest of the application
-  const [candidateList, setCandidateList] = useState<Candidate[]>(() => {
+  const [candidateList] = useState<Candidate[]>(() => {
     const saved = localStorage.getItem("candidates");
     return saved ? JSON.parse(saved) : [];
   });
@@ -34,30 +34,7 @@ function UploadDocuments() {
     candidate.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 3. This function simulates the external Candidate Portal upload action
-  const simulateCandidateUpload = (candidateId: number) => {
-    const updatedCandidates = candidateList.map((candidate) =>
-      candidate.id === candidateId
-        ? {
-            ...candidate,
-            status: "Documents Uploaded",
-            progress: 40,
-            uploadedFiles: {
-              Aadhaar: "aadhaar_front.pdf",
-              Aadhaar_data: "data:application/pdf;base64,...",
-              PAN: "pan_card.pdf",
-              PAN_data: "data:application/pdf;base64,...",
-              Resume: "resume.pdf",
-              Resume_data: "data:application/pdf;base64,..."
-            }
-          }
-        : candidate
-    );
 
-    setCandidateList(updatedCandidates);
-    localStorage.setItem("candidates", JSON.stringify(updatedCandidates));
-    alert("Simulation: Candidate successfully uploaded documents.");
-  };
 
   return (
     <DashboardLayout>

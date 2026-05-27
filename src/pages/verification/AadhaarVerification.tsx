@@ -1,7 +1,7 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ShieldCheck, CheckCircle, Clock, AlertTriangle, Cpu, Database, ArrowLeft } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, Database, ArrowLeft } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
 
 interface AadhaarRequest {

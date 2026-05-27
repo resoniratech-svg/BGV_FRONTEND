@@ -1,7 +1,7 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
-import { Search, CheckCircle, Clock, AlertTriangle, Brain, ScanFace, Shield, Database } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
 
 interface DeepfakeRequest {

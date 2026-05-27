@@ -2,12 +2,8 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
 import {
-  Search,
   CheckCircle,
   AlertTriangle,
-  Scale,
-  ShieldCheck,
-  Gavel,
   Clock,
   Database,
 } from "lucide-react";

@@ -1,7 +1,7 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
-import { Search, CheckCircle, Clock, AlertTriangle, Building2, Users, Briefcase, ShieldCheck } from "lucide-react";
+import {  CheckCircle, Clock, AlertTriangle,  Briefcase } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
 
 interface EmploymentRequest {

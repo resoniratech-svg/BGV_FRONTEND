@@ -1,7 +1,7 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, User, ShieldCheck, FileText, AlertTriangle, Globe } from "lucide-react";
+import { ArrowLeft,  FileText } from "lucide-react";
 import type { Candidate } from "../../types/Candidate"; // <-- Global Type Import
 
 const DEFAULT_CANDIDATES: Candidate[] = [

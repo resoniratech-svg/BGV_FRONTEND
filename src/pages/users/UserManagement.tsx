@@ -1,6 +1,6 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useState, useEffect, useMemo } from "react";
-import { Search, UserPlus, Users, Activity, ShieldBan, ShieldCheck, Mail, X, Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
+import { Search, UserPlus, Users, ShieldBan, ShieldCheck, Mail, X, Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
 
 interface SystemUser {
   id: string;
@@ -34,23 +34,21 @@ const defaultUsers: SystemUser[] = [
 
 function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [users, setUsers] = useState<SystemUser[]>(() => {
+    const saved = localStorage.getItem("system_users");
+    if (saved) {
+      return JSON.parse(saved) as SystemUser[];
+    } else {
+      localStorage.setItem("system_users", JSON.stringify(defaultUsers));
+      return defaultUsers;
+    }
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", mobile: "", password: "", role: "Verification Officer" });
-
-  useEffect(() => {
-    const saved = localStorage.getItem("system_users");
-    if (saved) {
-      setUsers(JSON.parse(saved));
-    } else {
-      localStorage.setItem("system_users", JSON.stringify(defaultUsers));
-      setUsers(defaultUsers);
-    }
-  }, []);
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +58,7 @@ function UserManagement() {
       id: `USR-${1000 + users.length + 1}`,
       name: newUser.name,
       email: newUser.email,
-      role: newUser.role as any,
+      role: newUser.role as SystemUser["role"],
       status: "Pending Invite",
       lastActive: "Never",
       mobile: newUser.mobile,
@@ -550,7 +548,7 @@ function UserManagement() {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Access Role</label>
                 <select
                   value={selectedUser.role}
-                  onChange={(e) => setSelectedUser({...selectedUser, role: e.target.value as any})}
+                  onChange={(e) => setSelectedUser({...selectedUser, role: e.target.value as SystemUser["role"]})}
                   className="w-full bg-[#F5F7FB] border border-gray-200 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-[#5B5FEF] transition-all text-sm appearance-none"
                 >
                   <option value="Admin">Admin</option>

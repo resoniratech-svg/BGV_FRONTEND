@@ -1,7 +1,7 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
-import { Search, CheckCircle, AlertTriangle, Globe, ShieldCheck, Eye, Clock, Database } from "lucide-react";
+import { CheckCircle, AlertTriangle,  Clock, Database } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
 
 interface WatchlistRequest {
