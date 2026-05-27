@@ -280,11 +280,10 @@ function CandidateDetails() {
           <h2 className="text-xl font-bold text-gray-900 mb-6">Verification Modules Real-time Status</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-sm text-gray-700">
             {verificationModules.map((module) => {
-              const status = module.customAction 
-                ? module.staticStatus! 
-                : module.isFraud
-                  ? candidate.fraudStatus || ((candidate as any).moduleStatuses || {})[module.key] || "Not Started"
-                  : ((candidate as any).moduleStatuses || {})[module.key] || "Not Started";
+              const modStatuses: Record<string, string> = candidate.moduleStatuses || {};
+              const status = module.isFraud
+                ? candidate.fraudStatus || modStatuses[module.key] || "Not Started"
+                : modStatuses[module.key] || "Not Started";
               return renderStatusBox(module.label, status, module.isFraud, module.onClick);
             })}
           </div>

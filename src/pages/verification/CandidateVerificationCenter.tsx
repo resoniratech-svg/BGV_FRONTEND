@@ -17,10 +17,10 @@ function CandidateVerificationCenter() {
 
   useEffect(() => {
     const saved = localStorage.getItem("candidates");
-    const candidates = JSON.parse(saved || "[]");
-    const found = candidates.find((c: any) => String(c.id) === id);
+    const candidates = JSON.parse(saved || "[]") as Candidate[];
+    const found = candidates.find((c: Candidate) => String(c.id) === id);
     if (found) {
-      setCandidate(found);
+      setCandidate(found as Candidate);
       setModuleStatuses(found.moduleStatuses || {});
     }
   }, [id]);
@@ -32,7 +32,7 @@ function CandidateVerificationCenter() {
   ];
 
   // Placeholder for future backend integration
-  const callVerificationAPI = async (moduleName: string): Promise<VerificationStatus> => {
+  const callVerificationAPI = async (_moduleName: string): Promise<VerificationStatus> => {
     return new Promise((resolve) => {
       setTimeout(() => {
         // TODO: Replace with real `await fetch('api/verify/...')`

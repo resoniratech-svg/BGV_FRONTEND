@@ -26,4 +26,5 @@ export interface Candidate {
   country?: string;
   reviewer?: string;
   moduleStatuses?: Record<string, string>;
+  uploadedFiles?: Record<string, string | string[] | null>;
 }

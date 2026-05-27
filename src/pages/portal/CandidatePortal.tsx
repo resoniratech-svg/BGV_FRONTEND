@@ -17,9 +17,11 @@ function CandidatePortal() {
   // Fetch candidate details
   useEffect(() => {
     const saved = localStorage.getItem("candidates");
-    const candidates: Candidate[] = saved ? JSON.parse(saved) : [];
+    const candidates = (saved ? JSON.parse(saved) : []) as Candidate[];
     const found = candidates.find((c) => String(c.id) === id);
-    if (found) setCandidate(found);
+    if (found) {
+      setCandidate(found);
+    }
   }, [id]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
