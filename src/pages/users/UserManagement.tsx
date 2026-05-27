@@ -1,5 +1,5 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Search, UserPlus, Users, ShieldBan, ShieldCheck, Mail, X, Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
 
 interface SystemUser {

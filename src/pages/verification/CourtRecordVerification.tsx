@@ -48,7 +48,7 @@ function CourtRecordVerification() {
   // Filter candidates waiting for this specific module
   const courtRequests: CourtRequest[] = localCandidates
     .filter((c: Candidate) => c.status !== "Verified" && c.status !== "Rejected")
-    .map((c: Candidate, index: number) => ({
+    .map((c: Candidate, _index: number) => ({
       id: `CRT-${1000 + c.id}`,
       candidateId: c.id,
       candidate: c.name || "Unknown",

@@ -21,7 +21,7 @@ function CandidateVerificationCenter() {
     const found = candidates.find((c: Candidate) => String(c.id) === id);
     if (found) {
       setCandidate(found as Candidate);
-      setModuleStatuses(found.moduleStatuses || {});
+      setModuleStatuses((found.moduleStatuses as Record<string, VerificationStatus>) || {});
     }
   }, [id]);
 
