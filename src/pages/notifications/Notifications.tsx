@@ -1,275 +1,365 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
-import { useState, useEffect, useMemo } from "react";
-import { Search, ShieldAlert, CheckCircle, AlertTriangle, Info, Bell, CheckCheck } from "lucide-react";
-import type { Candidate } from "../../types/Candidate";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  Bell,
+  Search,
+  ShieldAlert,
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  CheckCheck,
+} from "lucide-react";
+
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../../api/notificationApi";
 
 interface NotificationItem {
-  id: string;
+  id: number;
+  candidate_id?: number;
+  bgv_id?: number;
+
   title: string;
   description: string;
+
   type: "Critical" | "Success" | "Warning" | "Info";
-  time: string;
-  candidateId?: number;
+
+  is_read: boolean;
+
+  created_at: string;
 }
 
+type NotificationFilterType = "ALL" | "CRITICAL" | "UNREAD" | "RESOLVED";
+
 function Notifications() {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [readIds, setReadIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("candidates");
-    if (saved) setCandidates(JSON.parse(saved));
-  }, []);
+  const [activeFilter, setActiveFilter] =
+    useState<NotificationFilterType>("ALL");
 
-  const generatedNotifications = useMemo(() => {
-    const notifs: NotificationItem[] = [];
-    let notifId = 5000;
-
-    candidates.forEach((c) => {
-      // 1. Missing Docs Notification
-      if (c.progress === undefined || c.progress < 20) {
-        notifs.push({
-          id: `NOTIF-${notifId++}`,
-          title: "Awaiting Candidate Action",
-          description: `Candidate ${c.name} has not yet uploaded their required verification documents.`,
-          type: "Info",
-          time: "Pending",
-          candidateId: c.id
-        });
-      }
-
-      // 2. Ready for Audit Notification
-      if (c.status === "Documents Uploaded" || c.status === "Under Verification") {
-        notifs.push({
-          id: `NOTIF-${notifId++}`,
-          title: "Verification Queue Updated",
-          description: `Documents for ${c.name} are ready for manual or AI audit processing.`,
-          type: "Info",
-          time: "Action Required",
-          candidateId: c.id
-        });
-      }
-
-      // 3. Module Level Notifications
-      if (c.moduleStatuses) {
-        Object.entries(c.moduleStatuses).forEach(([module, status]) => {
-          if (status === "Verified") {
-            notifs.push({
-              id: `NOTIF-${notifId++}`,
-              title: "Verification Successful",
-              description: `${module} check passed securely for candidate ${c.name}.`,
-              type: "Success",
-              time: "Recent",
-              candidateId: c.id
-            });
-          } else if (status === "Fraud") {
-            notifs.push({
-              id: `NOTIF-${notifId++}`,
-              title: "Critical Fraud Alert",
-              description: `High risk anomaly detected in ${module} for ${c.name}. Immediate investigation required.`,
-              type: "Critical",
-              time: "Recent",
-              candidateId: c.id
-            });
-          } else if (status === "Rejected") {
-            notifs.push({
-              id: `NOTIF-${notifId++}`,
-              title: "Document Rejected",
-              description: `${module} was flagged for ${c.name}. Please request re-upload.`,
-              type: "Warning",
-              time: "Recent",
-              candidateId: c.id
-            });
-          }
-        });
-      }
-    });
-
-    return notifs.reverse(); // Latest first
-  }, [candidates]);
-
-  const handleMarkAllRead = () => {
-    setReadIds(generatedNotifications.map(n => n.id));
-  };
-
-  const markAsRead = (id: string) => {
-    if (!readIds.includes(id)) {
-      setReadIds([...readIds, id]);
+  const loadNotifications = async () => {
+    try {
+      const data = await getNotifications();
+      console.log(data);
+      setNotifications(data ?? []);
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const filteredNotifs = generatedNotifications.filter((n) => {
-    return (
-      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.type.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+  useEffect(() => {
+    loadNotifications();
+  }, []);
 
-  const criticalCount = generatedNotifications.filter(n => n.type === "Critical").length;
-  const unreadCount = generatedNotifications.filter(n => !readIds.includes(n.id)).length;
-  const resolvedCount = generatedNotifications.filter(n => readIds.includes(n.id)).length;
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
 
+      loadNotifications();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleMarkRead = async (id: number, isRead: boolean) => {
+    if (isRead) return;
+
+    try {
+      await markNotificationRead(id);
+
+      loadNotifications();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter((item) => {
+      const query = searchQuery.toLowerCase();
+
+      const matchesSearch =
+        item.title.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query) ||
+        item.type.toLowerCase().includes(query);
+
+      if (!matchesSearch) return false;
+
+      switch (activeFilter) {
+        case "CRITICAL":
+          return item.type === "Critical";
+
+        case "UNREAD":
+          return !item.is_read;
+
+        case "RESOLVED":
+          return item.is_read;
+
+        default:
+          return true;
+      }
+    });
+  }, [notifications, searchQuery, activeFilter]);
+
+  const totalAlerts = notifications.length;
+
+  const criticalCount = notifications.filter(
+    (n) => n.type === "Critical",
+  ).length;
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const resolvedCount = notifications.filter((n) => n.is_read).length;
   return (
     <DashboardLayout>
       <div className="space-y-8 max-w-5xl mx-auto pb-12">
         {/* Header */}
+
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">Notifications Center</h1>
-            <p className="text-gray-500 mt-2">Real-time system alerts, action items, and verification status tracking.</p>
+            <h1 className="text-4xl font-bold text-gray-900">
+              Notifications Center
+            </h1>
+
+            <p className="text-gray-500 mt-2">
+              Real-time system alerts and verification updates.
+            </p>
           </div>
 
-          <button 
+          <button
             onClick={handleMarkAllRead}
             disabled={unreadCount === 0}
-            className={`px-6 py-3 rounded-2xl shadow-sm transition-all flex items-center gap-2 font-bold ${
-              unreadCount === 0 
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
-                : "bg-[#5B5FEF] hover:bg-[#4B4FD8] text-white"
-            }`}
+            className={`px-6 py-3 rounded-2xl flex items-center gap-2 font-semibold shadow-sm transition-all
+        ${
+          unreadCount === 0
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : "bg-[#5B5FEF] text-white hover:bg-[#4B4FD8]"
+        }`}
           >
             <CheckCheck className="w-5 h-5" />
-            Mark All as Read
+            Mark All Read
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-500 font-medium text-sm">Total Alerts Generated</p>
-              <div className="p-2 bg-gray-50 rounded-xl"><Bell className="w-4 h-4 text-gray-500" /></div>
+        {/* Summary Cards */}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div
+            onClick={() => setActiveFilter("ALL")}
+            className={`rounded-3xl border bg-white p-6 cursor-pointer transition-all
+        ${
+          activeFilter === "ALL"
+            ? "ring-2 ring-gray-300 border-gray-300"
+            : "border-gray-200"
+        }`}
+          >
+            <div className="flex justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">Total Alerts</p>
+
+                <h2 className="text-4xl font-black mt-2">{totalAlerts}</h2>
+              </div>
+
+              <div className="bg-gray-100 rounded-xl p-3">
+                <Bell className="w-5 h-5" />
+              </div>
             </div>
-            <h2 className="text-4xl font-black text-gray-900">{generatedNotifications.length}</h2>
           </div>
 
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-500 font-medium text-sm">Critical Fraud Alerts</p>
-              <div className="p-2 bg-red-50 rounded-xl"><ShieldAlert className="w-4 h-4 text-red-500" /></div>
+          <div
+            onClick={() => setActiveFilter("CRITICAL")}
+            className={`rounded-3xl border bg-white p-6 cursor-pointer transition-all
+        ${
+          activeFilter === "CRITICAL"
+            ? "ring-2 ring-red-300 border-red-300"
+            : "border-gray-200"
+        }`}
+          >
+            <div className="flex justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">Critical Alerts</p>
+
+                <h2 className="text-4xl font-black text-red-500 mt-2">
+                  {criticalCount}
+                </h2>
+              </div>
+
+              <div className="bg-red-100 rounded-xl p-3 text-red-600">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
             </div>
-            <h2 className="text-4xl font-black text-red-500">{criticalCount}</h2>
           </div>
 
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-500 font-medium text-sm">Unread System Action Items</p>
-              <div className="p-2 bg-yellow-50 rounded-xl"><AlertTriangle className="w-4 h-4 text-yellow-500" /></div>
+          <div
+            onClick={() => setActiveFilter("UNREAD")}
+            className={`rounded-3xl border bg-white p-6 cursor-pointer transition-all
+        ${
+          activeFilter === "UNREAD"
+            ? "ring-2 ring-yellow-300 border-yellow-300"
+            : "border-gray-200"
+        }`}
+          >
+            <div className="flex justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">Unread</p>
+
+                <h2 className="text-4xl font-black text-yellow-500 mt-2">
+                  {unreadCount}
+                </h2>
+              </div>
+
+              <div className="bg-yellow-100 rounded-xl p-3 text-yellow-600">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
             </div>
-            <h2 className="text-4xl font-black text-yellow-500">{unreadCount}</h2>
           </div>
 
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-gray-500 font-medium text-sm">Resolved / Acknowledged</p>
-              <div className="p-2 bg-green-50 rounded-xl"><CheckCircle className="w-4 h-4 text-green-500" /></div>
+          <div
+            onClick={() => setActiveFilter("RESOLVED")}
+            className={`rounded-3xl border bg-white p-6 cursor-pointer transition-all
+        ${
+          activeFilter === "RESOLVED"
+            ? "ring-2 ring-green-300 border-green-300"
+            : "border-gray-200"
+        }`}
+          >
+            <div className="flex justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">Read</p>
+
+                <h2 className="text-4xl font-black text-green-500 mt-2">
+                  {resolvedCount}
+                </h2>
+              </div>
+
+              <div className="bg-green-100 rounded-xl p-3 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+              </div>
             </div>
-            <h2 className="text-4xl font-black text-green-500">{resolvedCount}</h2>
           </div>
         </div>
 
         {/* Notifications List */}
+
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-2xl font-semibold text-gray-900">Live Alert Stream</h2>
-            <div className="relative w-full sm:w-auto">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
-                <Search className="w-4 h-4" />
-              </span>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Live Alert Stream
+              {activeFilter !== "ALL" && (
+                <span className="ml-2 text-sm text-gray-400">
+                  ({activeFilter})
+                </span>
+              )}
+            </h2>
+
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+
               <input
                 type="text"
-                placeholder="Search alerts..."
+                placeholder="Search notifications..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-[#F5F7FB] border border-gray-200 rounded-2xl pl-11 pr-5 py-3.5 outline-none w-full sm:w-[320px] focus:bg-white focus:border-[#5B5FEF] transition-all text-sm text-gray-900"
+                className="bg-[#F5F7FB] rounded-2xl border border-gray-200 pl-11 pr-5 py-3 w-80 focus:outline-none focus:border-[#5B5FEF]"
               />
             </div>
           </div>
 
           <div className="divide-y divide-gray-100">
-            {filteredNotifs.length > 0 ? (
-              filteredNotifs.map((item) => {
-                const isRead = readIds.includes(item.id);
-
+            {filteredNotifications.length === 0 ? (
+              <div className="p-16 text-center text-gray-400">
+                No notifications found.
+              </div>
+            ) : (
+              filteredNotifications.map((item) => {
                 return (
                   <div
                     key={item.id}
-                    onClick={() => markAsRead(item.id)}
-                    className={`p-6 hover:bg-gray-50 transition-all cursor-pointer ${
-                      !isRead ? "bg-indigo-50/30" : "bg-white"
-                    }`}
+                    onClick={() => handleMarkRead(item.id, item.is_read)}
+                    className={`p-6 cursor-pointer transition hover:bg-gray-50
+              ${!item.is_read ? "bg-indigo-50" : ""}
+            `}
                   >
-                    <div className="flex items-start justify-between flex-wrap gap-4">
-                      <div className="flex items-start gap-5">
-                        {/* Icon */}
+                    <div className="flex justify-between gap-6">
+                      <div className="flex gap-5">
                         <div
-                          className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0
-                            ${
-                              item.type === "Critical"
-                                ? "bg-red-100 text-red-600"
-                                : item.type === "Success"
-                                ? "bg-green-100 text-green-600"
-                                : item.type === "Warning"
-                                ? "bg-orange-100 text-orange-600"
-                                : "bg-indigo-100 text-indigo-600"
-                            }
-                          `}
+                          className={`w-14 h-14 rounded-2xl flex items-center justify-center
+
+                  ${
+                    item.type === "Critical"
+                      ? "bg-red-100 text-red-600"
+                      : item.type === "Success"
+                        ? "bg-green-100 text-green-600"
+                        : item.type === "Warning"
+                          ? "bg-orange-100 text-orange-600"
+                          : "bg-indigo-100 text-indigo-600"
+                  }`}
                         >
-                          {item.type === "Critical" && <ShieldAlert className="w-6 h-6" />}
-                          {item.type === "Success" && <CheckCircle className="w-6 h-6" />}
-                          {item.type === "Warning" && <AlertTriangle className="w-6 h-6" />}
+                          {item.type === "Critical" && (
+                            <ShieldAlert className="w-6 h-6" />
+                          )}
+
+                          {item.type === "Success" && (
+                            <CheckCircle className="w-6 h-6" />
+                          )}
+
+                          {item.type === "Warning" && (
+                            <AlertTriangle className="w-6 h-6" />
+                          )}
+
                           {item.type === "Info" && <Info className="w-6 h-6" />}
                         </div>
 
-                        {/* Content */}
                         <div>
                           <div className="flex items-center gap-3">
-                             <h3 className={`text-lg font-bold ${!isRead ? "text-gray-900" : "text-gray-600"}`}>
-                               {item.title}
-                             </h3>
-                             {!isRead && (
-                               <span className="w-2.5 h-2.5 bg-[#5B5FEF] rounded-full inline-block"></span>
-                             )}
+                            <h3
+                              className={`text-lg font-bold
+                        ${item.is_read ? "text-gray-600" : "text-gray-900"}`}
+                            >
+                              {item.title}
+                            </h3>
+
+                            {!item.is_read && (
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#5B5FEF] animate-pulse"></span>
+                            )}
                           </div>
-                          
-                          <p className={`mt-1.5 font-medium text-sm ${!isRead ? "text-gray-700" : "text-gray-500"}`}>
+
+                          <p
+                            className={`mt-2
+                      ${item.is_read ? "text-gray-500" : "text-gray-700"}`}
+                          >
                             {item.description}
                           </p>
 
-                          <p className="text-xs text-gray-400 mt-3 font-semibold uppercase tracking-wider">
-                            Timestamp: {item.time}
+                          <p className="text-xs text-gray-400 mt-3">
+                            {new Date(item.created_at).toLocaleString()}
                           </p>
                         </div>
                       </div>
 
-                      {/* Badge */}
-                      <div className="flex items-center gap-3">
-                         <span
-                           className={`px-3 py-1.5 rounded-full text-xs font-bold border inline-block
-                             ${
-                               item.type === "Critical"
-                                 ? "bg-red-50 text-red-700 border-red-100"
-                                 : item.type === "Success"
-                                 ? "bg-green-50 text-green-700 border-green-100"
-                                 : item.type === "Warning"
-                                 ? "bg-orange-50 text-orange-700 border-orange-100"
-                                 : "bg-indigo-50 text-indigo-700 border-indigo-100"
-                             }
-                           `}
-                         >
-                           {item.type} Status
-                         </span>
-                      </div>
+                      <span
+                        className={`h-fit px-3 py-1 rounded-full text-xs font-bold
+
+                ${
+                  item.type === "Critical"
+                    ? "bg-red-50 text-red-700"
+                    : item.type === "Success"
+                      ? "bg-green-50 text-green-700"
+                      : item.type === "Warning"
+                        ? "bg-orange-50 text-orange-700"
+                        : "bg-indigo-50 text-indigo-700"
+                }`}
+                      >
+                        {item.type}
+                      </span>
                     </div>
                   </div>
                 );
               })
-            ) : (
-               <div className="p-16 text-center text-gray-400 font-medium text-sm">
-                  No active system notifications or alerts currently available.
-               </div>
             )}
           </div>
         </div>

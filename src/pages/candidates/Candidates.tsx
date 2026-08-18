@@ -1,110 +1,135 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { Eye, Edit2, Trash2 } from "lucide-react";
-import type { Candidate } from "../../types/Candidate";// <-- Using Global Type\
+import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Eye, Edit2, Trash2, Calendar } from "lucide-react";
+import { useCandidatesModule } from "../../hooks/useCandidatesModule";
 
-
-
-const DEFAULT_CANDIDATES: Candidate[] = [
-  {
-    id: 1,
-    name: "Rahul Sharma",
-    email: "rahul@example.com",
-    status: "Verified",
-    role: "Software Engineer",
-    progress: 100,
-  },
-  {
-    id: 2,
-    name: "Priya Reddy",
-    email: "priya@example.com",
-    status: "Pending",
-    role: "Data Analyst",
-    progress: 0,
-  },
-  {
-    id: 3,
-    name: "Arjun Patel",
-    email: "arjun@example.com",
-    status: "Fraud Alert",
-    role: "UI/UX Designer",
-    progress: 80,
-  },
-];
+import {
+  deleteCandidateApi,
+  updateCandidateStatusApi,
+  generateCandidateLink,
+} from "../../api/candidateApi";
 
 function Candidates() {
   const navigate = useNavigate();
-
-  const [candidateList, setCandidateList] = useState<Candidate[]>(() => {
-    const saved = localStorage.getItem("candidates");
-    return saved ? JSON.parse(saved) : DEFAULT_CANDIDATES;
-  });
+  const location = useLocation();
+  const {
+    stats,
+    candidates,
+    activeFilter,
+    loadCandidatesByStatus,
+    loadCandidates,
+  } = useCandidatesModule();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
-  const [sortOrder, setSortOrder] = useState("Latest");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  // Initial setup loading hook data
+  useEffect(() => {
+    loadCandidates();
+  }, []);
 
-  const deleteCandidate = (id: number) => {
-    if (confirm("Are you sure you want to remove this candidate?")) {
-      const updated = candidateList.filter((c) => c.id !== id);
-      setCandidateList(updated);
-      localStorage.setItem("candidates", JSON.stringify(updated));
+  // Fixes stuck navigation behavior when coming from Dashboard
+  useEffect(() => {
+    if (
+      location.state?.filterType === "COMPLETED_TODAY" &&
+      candidates.length > 0
+    ) {
+      loadCandidatesByStatus("VERIFIED");
+      setSelectedDate(location.state.date);
+      setStatusFilter("VERIFIED");
+
+      // Clear the location state history within React Router to prevent locking the screen
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [
+    location.state,
+    candidates.length,
+    navigate,
+    location.pathname,
+    loadCandidatesByStatus,
+  ]);
+
+  // Handle local card clicks to accurately reset conflicting state details
+  const handleCardClick = (status: string) => {
+    if (status === "ALL") {
+      setSelectedDate(""); // Clear out the specific calendar filter date
+      setStatusFilter("All Status");
+    } else {
+      setStatusFilter(status);
+    }
+    loadCandidatesByStatus(status);
+  };
+
+  const deleteCandidate = async (id: number) => {
+    // if (confirm("Are you sure you want to remove this candidate?")) {
+
+    // }
+    try {
+      await deleteCandidateApi(id);
+      loadCandidates();
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const totalCandidates = candidateList.length;
+  const totalCandidates = stats.total || 0;
+  const verifiedCount = stats.verified || 0;
+  const pendingCount = stats.pending || 0;
+  const fraudCount = stats.fraud || 0;
 
-  const verifiedCount = candidateList.filter(
-    (candidate) => candidate.status === "Verified"
-  ).length;
+  // Filter candidates based on search queries and the date filters
+  const filteredCandidates = candidates.filter((candidate) => {
+    const matchesSearch =
+      candidate.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      candidate.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      candidate.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(candidate.id).includes(searchQuery);
 
-  const pendingCount = candidateList.filter(
-    (candidate) =>
-      candidate.status === "Pending" || candidate.status === "Request Sent"
-  ).length;
+    const targetTimestamp =
+      activeFilter === "ALL"
+        ? candidate.created_at
+        : candidate.updated_at || candidate.created_at;
 
-  const fraudCount = candidateList.filter(
-    (candidate) => candidate.status === "Fraud Alert"
-  ).length;
+    const filterDate = targetTimestamp
+      ? new Date(targetTimestamp).toISOString().split("T")[0]
+      : "";
 
-  const filteredCandidates = candidateList
-    .filter((candidate) => {
-      const matchesSearch =
-        candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        candidate.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (candidate.role && candidate.role.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        String(candidate.id).includes(searchQuery);
+    const matchesDate = !selectedDate || filterDate === selectedDate;
 
-      const matchesStatus =
-        statusFilter === "All Status" || candidate.status === statusFilter;
+    return matchesSearch && matchesDate;
+  });
+  const displayedCandidates = showAll
+    ? filteredCandidates
+    : filteredCandidates.slice(0, 10);
 
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      if (sortOrder === "Latest") {
-        return b.id - a.id;
-      }
-      return a.id - b.id;
-    });
-
-  const updateCandidateStatus = (
+  const updateCandidateStatus = async (
     candidateId: number,
     nextStatus: string,
-    nextProgress: number
+    nextProgress: number,
   ) => {
-    const updatedCandidates = candidateList.map((candidate) =>
-      candidate.id === candidateId
-        ? {
-            ...candidate,
-            status: nextStatus,
-            progress: nextProgress,
-          }
-        : candidate
-    );
+    try {
+      await updateCandidateStatusApi(candidateId, {
+        status: nextStatus,
+        progress: nextProgress,
+      });
 
-    setCandidateList(updatedCandidates);
-    localStorage.setItem("candidates", JSON.stringify(updatedCandidates));
+      loadCandidates();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const sendVerificationRequest = async (candidateId: number) => {
+    try {
+      await generateCandidateLink(candidateId);
+      alert("Verification REQUEST_SENT successfully");
+      loadCandidates();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to send verification request");
+    }
   };
 
   return (
@@ -129,28 +154,56 @@ function Candidates() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+          <div
+            onClick={() => handleCardClick("ALL")}
+            className={`bg-white rounded-3xl p-6 border shadow-sm cursor-pointer transition-all ${
+              activeFilter === "ALL"
+                ? "border-[#5B5FEF] ring-2 ring-indigo-100"
+                : "border-gray-100"
+            }`}
+          >
             <p className="text-gray-500 font-medium">Total Candidates</p>
             <h2 className="text-5xl font-bold text-gray-900 mt-4">
               {totalCandidates}
             </h2>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+          <div
+            onClick={() => handleCardClick("VERIFIED")}
+            className={`bg-white rounded-3xl p-6 border shadow-sm cursor-pointer transition-all ${
+              activeFilter === "VERIFIED"
+                ? "border-green-500 ring-2 ring-green-100"
+                : "border-gray-100"
+            }`}
+          >
             <p className="text-gray-500 font-medium">Verified</p>
             <h2 className="text-5xl font-bold text-green-500 mt-4">
               {verifiedCount}
             </h2>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+          <div
+            onClick={() => handleCardClick("PENDING")}
+            className={`bg-white rounded-3xl p-6 border shadow-sm cursor-pointer transition-all ${
+              activeFilter === "PENDING"
+                ? "border-yellow-500 ring-2 ring-yellow-100"
+                : "border-gray-100"
+            }`}
+          >
             <p className="text-gray-500 font-medium">Pending</p>
             <h2 className="text-5xl font-bold text-yellow-500 mt-4">
               {pendingCount}
             </h2>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+          <div
+            onClick={() => handleCardClick("FRAUD_ALERT")}
+            className={`bg-white rounded-3xl p-6 border shadow-sm cursor-pointer transition-all ${
+              activeFilter === "FRAUD_ALERT"
+                ? "border-red-500 ring-2 ring-red-100"
+                : "border-gray-100"
+            }`}
+          >
             <p className="text-gray-500 font-medium">Fraud Alerts</p>
             <h2 className="text-5xl font-bold text-red-500 mt-4">
               {fraudCount}
@@ -159,7 +212,19 @@ function Candidates() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+        <div
+          className="
+sticky
+top-4
+z-30
+bg-white
+rounded-3xl
+p-6
+shadow-sm
+border
+border-gray-100
+"
+        >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
             <input
               type="text"
@@ -172,42 +237,50 @@ function Candidates() {
             <div className="flex items-center gap-4 w-full md:w-auto">
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  loadCandidatesByStatus(
+                    e.target.value === "All Status" ? "ALL" : e.target.value,
+                  );
+                }}
                 className="bg-[#F5F7FB] border border-gray-200 px-5 py-3.5 rounded-2xl outline-none text-gray-700 font-medium w-full md:w-auto focus:bg-white focus:border-[#5B5FEF] transition-all"
               >
                 <option value="All Status">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Request Sent">Request Sent</option>
-                <option value="Documents Uploaded">Documents Uploaded</option>
-                <option value="Under Verification">Under Verification</option>
-                <option value="Verified">Verified</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Fraud Alert">Fraud Alert</option>
+                <option value="PENDING">Pending</option>
+                <option value="REQUEST_SENT">REQUEST_SENT</option>
+                <option value="DOCUMENTS_UPLOADED">DOCUMENTS_UPLOADED</option>
+                <option value="UNDER_VERIFICATION">UNDER_VERIFICATION</option>
+                <option value="VERIFIED">VERIFIED</option>
+                <option value="REJECTED">REJECTED</option>
+                <option value="FRAUD_ALERT">FRAUD_ALERT</option>
               </select>
 
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="bg-[#F5F7FB] border border-gray-200 px-5 py-3.5 rounded-2xl outline-none text-gray-700 font-medium w-full md:w-auto focus:bg-white focus:border-[#5B5FEF] transition-all"
-              >
-                <option value="Latest">Latest</option>
-                <option value="Oldest">Oldest</option>
-              </select>
+              <div className="relative w-fit">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                />
+                <div className="bg-[#F5F7FB] border border-gray-200 p-3 rounded-2xl hover:bg-white transition-all">
+                  <Calendar className="w-5 h-5 text-gray-600" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
+          <div className="overflow-auto max-h-[650px]">
             <table className="w-full min-w-[1100px]">
-              <thead className="bg-[#F8FAFC] border-b border-gray-100">
+              <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-gray-100">
                 <tr>
                   <th className="text-left p-6 text-gray-500 font-semibold text-sm">
                     Candidate
                   </th>
                   <th className="text-left p-6 text-gray-500 font-semibold text-sm">
-                    Role
+                    Phone
                   </th>
                   <th className="text-left p-6 text-gray-500 font-semibold text-sm">
                     Email
@@ -225,7 +298,7 @@ function Candidates() {
               </thead>
               <tbody>
                 {filteredCandidates.length > 0 ? (
-                  filteredCandidates.map((candidate) => (
+                  displayedCandidates.map((candidate) => (
                     <tr
                       key={candidate.id}
                       className="border-b border-gray-50 hover:bg-[#F9FAFB] transition-all"
@@ -233,11 +306,11 @@ function Candidates() {
                       <td className="p-6">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-[#5B5FEF] font-bold text-lg border border-indigo-100">
-                            {candidate.name.charAt(0)}
+                            {candidate.full_name?.charAt(0)}
                           </div>
                           <div>
                             <p className="text-gray-900 font-bold">
-                              {candidate.name}
+                              {candidate.full_name}
                             </p>
                             <p className="text-gray-400 text-xs mt-0.5 font-medium">
                               Candidate ID #{candidate.id}
@@ -246,7 +319,7 @@ function Candidates() {
                         </div>
                       </td>
                       <td className="p-6 text-gray-700 font-semibold text-sm">
-                        {candidate.role || candidate.job_role || "Associate"}
+                        {candidate.phone}
                       </td>
                       <td className="p-6 text-gray-500 text-sm font-medium">
                         {candidate.email}
@@ -254,36 +327,34 @@ function Candidates() {
                       <td className="p-6">
                         <span
                           className={`px-3 py-1.5 rounded-full text-xs font-bold border ${
-                            candidate.status === "Verified"
+                            candidate.status === "VERIFIED"
                               ? "bg-green-50 text-green-600 border-green-100"
-                              : candidate.status === "Pending"
-                              ? "bg-yellow-50 text-yellow-600 border-yellow-100"
-                              : candidate.status === "Request Sent"
-                              ? "bg-blue-50 text-blue-600 border-blue-100"
-                              : candidate.status === "Documents Uploaded"
-                              ? "bg-indigo-50 text-indigo-600 border-indigo-100"
-                              : candidate.status === "Under Verification"
-                              ? "bg-purple-50 text-purple-600 border-purple-100"
-                              : candidate.status === "Rejected"
-                              ? "bg-gray-50 text-gray-600 border-gray-200"
-                              : "bg-red-50 text-red-600 border-red-100"
+                              : candidate.status === "PENDING"
+                                ? "bg-yellow-50 text-yellow-600 border-yellow-100"
+                                : candidate.status === "REQUEST_SENT"
+                                  ? "bg-blue-50 text-blue-600 border-blue-100"
+                                  : candidate.status === "DOCUMENTS_UPLOADED"
+                                    ? "bg-indigo-50 text-indigo-600 border-indigo-100"
+                                    : candidate.status === "UNDER_VERIFICATION"
+                                      ? "bg-purple-50 text-purple-600 border-purple-100"
+                                      : "bg-red-50 text-red-600 border-red-100"
                           }`}
                         >
                           {candidate.status}
                         </span>
                       </td>
 
-                      {/* Progress */}
+                      {/* Progress Bar */}
                       <td className="p-6">
                         <div className="flex items-center gap-3">
                           <div className="w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
                             <div
                               className={`h-2 rounded-full transition-all duration-500 ${
-                                candidate.status === "Fraud Alert"
+                                candidate.status === "FRAUD_ALERT"
                                   ? "bg-red-500"
-                                  : candidate.status === "Verified"
-                                  ? "bg-green-500"
-                                  : "bg-[#5B5FEF]"
+                                  : candidate.status === "VERIFIED"
+                                    ? "bg-green-500"
+                                    : "bg-[#5B5FEF]"
                               }`}
                               style={{
                                 width: `${Math.min(candidate.progress || 0, 100)}%`,
@@ -296,36 +367,39 @@ function Candidates() {
                         </div>
                       </td>
 
-                      {/* Action */}
+                      {/* Dynamic Workflow Actions */}
                       <td className="p-6">
                         <div className="flex items-center gap-3 min-w-[280px]">
-                          {/* Workflow specific action button */}
-                          {candidate.status === "Pending" ? (
+                          {candidate.status === "PENDING" ? (
                             <button
                               onClick={() =>
-                                updateCandidateStatus(candidate.id, "Request Sent", 20)
+                                sendVerificationRequest(candidate.id)
                               }
                               className="w-[140px] h-[40px] rounded-xl text-xs font-bold text-white bg-[#5B5FEF] hover:bg-[#4B4FD8] shadow-sm transition-all"
                             >
                               Send Request
                             </button>
-                          ) : candidate.status === "Request Sent" ? (
+                          ) : candidate.status === "REQUEST_SENT" ? (
                             <button
                               disabled
                               className="w-[140px] h-[40px] rounded-xl text-xs font-bold text-gray-500 bg-gray-100 border border-gray-200 cursor-not-allowed"
                             >
                               Awaiting Upload
                             </button>
-                          ) : candidate.status === "Documents Uploaded" ? (
+                          ) : candidate.status === "DOCUMENTS_UPLOADED" ? (
                             <button
                               onClick={() => navigate("/verification/queue")}
                               className="w-[140px] h-[40px] rounded-xl text-xs font-bold text-white bg-indigo-500 hover:bg-indigo-600 shadow-sm transition-all"
                             >
                               Go to Queue
                             </button>
-                          ) : candidate.status === "Under Verification" ? (
+                          ) : candidate.status === "UNDER_VERIFICATION" ? (
                             <button
-                              onClick={() => navigate(`/verification/candidate/${candidate.id}`)}
+                              onClick={() =>
+                                navigate(
+                                  `/verification/candidate/${candidate.id}`,
+                                )
+                              }
                               className="w-[140px] h-[40px] rounded-xl text-xs font-bold text-white bg-purple-500 hover:bg-purple-600 shadow-sm transition-all"
                             >
                               Open Verification
@@ -334,10 +408,8 @@ function Candidates() {
                             <button
                               disabled
                               className={`w-[140px] h-[40px] rounded-xl text-xs font-bold text-white cursor-default shadow-sm ${
-                                candidate.status === "Verified"
+                                candidate.status === "VERIFIED"
                                   ? "bg-green-500"
-                                  : candidate.status === "Rejected"
-                                  ? "bg-gray-500"
                                   : "bg-red-500"
                               }`}
                             >
@@ -345,29 +417,33 @@ function Candidates() {
                             </button>
                           )}
 
-                          {/* Static View Profile button replaced with action icons */}
+                          {/* Standard Actions Icons */}
                           <div className="flex items-center gap-2">
-                             <button 
-                               onClick={() => navigate(`/candidates/${candidate.id}`)}
-                               className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                               title="View Profile"
-                             >
-                               <Eye className="w-4 h-4" />
-                             </button>
-                             <button 
-                               onClick={() => navigate(`/candidates/edit/${candidate.id}`)}
-                               className="p-2 transition-all rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
-                               title="Edit Candidate"
-                             >
-                               <Edit2 className="w-4 h-4" />
-                             </button>
-                             <button 
-                               onClick={() => deleteCandidate(candidate.id)}
-                               className="p-2 transition-all rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
-                               title="Delete Candidate"
-                             >
-                               <Trash2 className="w-4 h-4" />
-                             </button>
+                            <button
+                              onClick={() =>
+                                navigate(`/candidates/${candidate.id}`)
+                              }
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                              title="View Profile"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                navigate(`/candidates/edit/${candidate.id}`)
+                              }
+                              className="p-2 transition-all rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+                              title="Edit Candidate"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteCandidate(candidate.id)}
+                              className="p-2 transition-all rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
+                              title="Delete Candidate"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       </td>
@@ -385,6 +461,23 @@ function Candidates() {
                 )}
               </tbody>
             </table>
+            {filteredCandidates.length > 10 && (
+              <div className="p-5 border-t border-gray-100 flex justify-end">
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className="
+        text-indigo-600
+        hover:text-indigo-800
+        font-semibold
+        text-sm
+      "
+                >
+                  {showAll
+                    ? "Show Less"
+                    : `View All (${filteredCandidates.length})`}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

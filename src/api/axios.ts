@@ -1,21 +1,53 @@
+// import axios from "axios";
+
+// const api = axios.create({
+//   baseURL: "http://127.0.0.1:5000/api/v1",
+//   headers: {
+//     "Content-Type": "application/json",
+//   },
+// });
+
+// api.interceptors.request.use((config) => {
+
+//   const token = localStorage.getItem("token");
+
+//   if (token) {
+//     config.headers.Authorization = `Bearer ${token}`;
+//   }
+
+//   return config;
+// });
+
+// export default api;
+
+
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:5000/api/v1",
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(
+  (config) => {
 
-  const token = localStorage.getItem("token");
+    const token =
+      localStorage.getItem("token");
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+
+      config.headers = config.headers || {};
+
+      config.headers.Authorization =
+        `Bearer ${token}`;
+
+    }
+
+    return config;
+
   }
-
-  return config;
-});
+);
 
 export default api;

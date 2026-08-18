@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Search, LogOut, ChevronDown, Menu } from "lucide-react";
+import { getCurrentUser } from "../api/authApi";
 
 interface NavbarProps {
   toggleSidebar?: () => void;
@@ -10,6 +11,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -21,6 +23,18 @@ function Navbar({ toggleSidebar }: NavbarProps) {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const data = await getCurrentUser();
+        setCurrentUser(data);
+      } catch (error) {
+        console.error("Failed to load user", error);
+      }
+    };
+    loadUser();
   }, []);
 
   const handleLogout = () => {
@@ -53,19 +67,6 @@ function Navbar({ toggleSidebar }: NavbarProps) {
 
       {/* Right Section */}
       <div className="flex items-center gap-2 md:gap-5">
-        {/* Search */}
-        <div className="relative hidden md:block">
-          <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="w-[300px] bg-[#F5F7FB] border border-gray-200 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-[#5B5FEF]"
-          />
-        </div>
-
         {/* Mobile Search Button */}
         <button className="w-10 h-10 md:hidden bg-[#F5F7FB] border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-all">
           <Search size={18} className="text-gray-600" />
@@ -87,7 +88,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
           >
             <div className="text-right hidden sm:block">
               <p className="text-gray-900 font-semibold leading-tight">
-                Admin User
+                {currentUser?.full_name || currentUser?.username || "Admin User"}
               </p>
               <p className="text-gray-500 text-xs mt-0.5">
                 Super Admin
@@ -95,7 +96,7 @@ function Navbar({ toggleSidebar }: NavbarProps) {
             </div>
 
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-[#5B5FEF] flex items-center justify-center text-white font-bold shadow-sm">
-              A
+              {(currentUser?.full_name || currentUser?.username || "A").charAt(0).toUpperCase()}
             </div>
 
             <ChevronDown

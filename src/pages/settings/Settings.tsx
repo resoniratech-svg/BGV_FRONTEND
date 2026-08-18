@@ -1,209 +1,434 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useState, useEffect } from "react";
-import { User, Shield, Bell, Moon, Sun, Smartphone, Key, Globe, Layout, CheckCircle, Save } from "lucide-react";
+import { Bell, Smartphone, Building2, Eye, EyeOff } from "lucide-react";
+
+import {
+  getCurrentUser,
+  changePassword,
+  updateProfile,
+} from "../../api/authApi";
 
 function Settings() {
-  const [profile, setProfile] = useState({ name: "System Administrator", email: "admin@karves.com" });
-  
-  // Fake state toggles
+  const [profile, setProfile] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    username: "",
+  });
+
   const [twoFactor, setTwoFactor] = useState(true);
   const [loginAlerts, setLoginAlerts] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
-  const [notifications, setNotifications] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState("15 mins");
+  const [activeTab, setActiveTab] = useState("profile");
+  const [currentPassword, setCurrentPassword] = useState("");
 
-  // Load from system_users
+  const [newPassword, setNewPassword] = useState("");
+
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
   useEffect(() => {
-    const saved = localStorage.getItem("system_users");
-    if (saved) {
-      const users = JSON.parse(saved);
-      const admin = users.find((u: any) => u.id === "USR-1001");
-      if (admin) {
-        setProfile({ name: admin.name, email: admin.email });
-      }
-    }
+    loadProfile();
   }, []);
+  const [savingProfile, setSavingProfile] = useState(false);
 
-  const handleSaveProfile = () => {
-    const saved = localStorage.getItem("system_users");
-    if (saved) {
-      const users = JSON.parse(saved);
-      const updatedUsers = users.map((u: any) => {
-        if (u.id === "USR-1001") {
-          return { ...u, name: profile.name, email: profile.email };
-        }
-        return u;
+  const handleProfileUpdate = async () => {
+    try {
+      setSavingProfile(true);
+
+      const response = await updateProfile({
+        username: profile.username,
+
+        full_name: profile.full_name,
+
+        email: profile.email,
+
+        phone: profile.phone,
       });
-      localStorage.setItem("system_users", JSON.stringify(updatedUsers));
-      alert("Profile Settings Saved Successfully.");
+
+      alert(response.message);
+
+      await loadProfile();
+    } catch (error: any) {
+      alert(error?.response?.data?.message || "Profile update failed");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+  const handlePasswordUpdate = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      alert("All fields are required");
+
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match");
+
+      return;
+    }
+
+    try {
+      setUpdatingPassword(true);
+
+      const response = await changePassword(currentPassword, newPassword);
+
+      alert(response.message);
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      alert(error?.response?.data?.message || "Password update failed");
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+  const loadProfile = async () => {
+    try {
+      const data = await getCurrentUser();
+
+      setProfile({
+        full_name: data.full_name || "",
+        email: data.email || "",
+        phone: data.phone || "",
+        username: data.username || "",
+      });
+    } catch (error) {
+      console.error("Failed to load profile", error);
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 max-w-6xl mx-auto pb-12">
-        {/* Header */}
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900">Settings & Configuration</h1>
-          <p className="text-gray-500 mt-2">Manage platform preferences, security protocols, and system settings.</p>
+      <div className="max-w-6xl mx-auto py-8 px-4">
+        {/* PAGE HEADER */}
+
+        <div className="mb-10">
+          <h1 className="text-6xl font-extrabold tracking-tight text-slate-900">
+            Settings
+          </h1>
+
+          <p className="text-slate-500 mt-3 text-base">
+            Manage your account preferences and security configuration.
+          </p>
         </div>
 
-        {/* Settings Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-12 gap-6">
+          {/* LEFT PROFILE CARD */}
 
-          {/* Profile Settings */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-            <div className="flex items-center gap-3 mb-8 border-b border-gray-100 pb-4">
-               <div className="p-2.5 bg-indigo-50 rounded-xl"><User className="w-6 h-6 text-[#5B5FEF]" /></div>
-               <h2 className="text-2xl font-bold text-gray-900">Profile Configuration</h2>
-            </div>
+          <div className="col-span-12 lg:col-span-4 xl:col-span-4">
+            <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+              {/* COVER */}
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-                <input
-                  type="text"
-                  value={profile.name}
-                  onChange={(e) => setProfile({...profile, name: e.target.value})}
-                  className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-4 outline-none focus:bg-white focus:border-[#5B5FEF] transition-all"
-                />
+              <div className="h-40 bg-gradient-to-r from-teal-50 to-slate-100 relative">
+                <div className="absolute left-1/2 top-full -translate-x-1/2 -translate-y-1/2">
+                  <div className="w-28 h-28 rounded-full bg-teal-100 border-[6px] border-white flex items-center justify-center shadow-lg">
+                    <span className="text-6xl font-extrabold tracking-tight text-teal-700">
+                      {profile.full_name?.charAt(0)?.toUpperCase() || "A"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                <input
-                  type="email"
-                  value={profile.email}
-                  onChange={(e) => setProfile({...profile, email: e.target.value})}
-                  className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-4 outline-none focus:bg-white focus:border-[#5B5FEF] transition-all"
-                />
-              </div>
+              <div className="pt-16 pb-8 px-8">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-slate-900">
+                    {profile.full_name}
+                  </h2>
 
-              <button 
-                onClick={handleSaveProfile}
-                className="bg-[#5B5FEF] hover:bg-[#4B4FD8] text-white px-6 py-3.5 rounded-2xl shadow-md transition-all font-bold flex items-center justify-center gap-2 w-full mt-4"
-              >
-                <Save className="w-5 h-5" />
-                Update Admin Identity
-              </button>
+                  <p className="text-slate-500 mt-2 text-base">
+                    {profile.email}
+                  </p>
+
+                  <div className="inline-flex mt-5 px-5 py-2 rounded-full bg-teal-50 border border-teal-200 px-4 py-1">
+                    <span className="text-teal-700 font-semibold">
+                      SuperAdmin Access
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t mt-8 pt-8 space-y-6">
+                  <div className="flex items-center gap-4">
+                    <Bell className="w-6 h-6 text-slate-400" />
+
+                    <span className="text-slate-600 text-lg truncate">
+                      {profile.email}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <Smartphone className="w-6 h-6 text-slate-400" />
+
+                    <span className="text-slate-600 text-lg">
+                      {profile.phone}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <Building2 className="w-6 h-6 text-slate-400" />
+
+                    <span className="text-slate-600 text-lg">Super Admin</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Security Settings */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-            <div className="flex items-center gap-3 mb-8 border-b border-gray-100 pb-4">
-               <div className="p-2.5 bg-red-50 rounded-xl"><Shield className="w-6 h-6 text-red-500" /></div>
-               <h2 className="text-2xl font-bold text-gray-900">Security Architecture</h2>
-            </div>
+          {/* RIGHT SECTION */}
 
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                <div className="flex items-center gap-4">
-                  <Smartphone className="w-6 h-6 text-gray-400" />
-                  <div>
-                    <h3 className="text-gray-900 font-bold">Two-Factor Authentication (2FA)</h3>
-                    <p className="text-gray-500 text-sm mt-0.5 font-medium">Protect platform access</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setTwoFactor(!twoFactor)}
-                  className={`px-5 py-2 rounded-xl font-bold transition-all text-sm ${twoFactor ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"}`}
+          <div className="col-span-12 lg:col-span-8 xl:col-span-8">
+            <div>
+              {/* TABS */}
+
+              <div className="flex gap-8 border-b border-slate-200 mb-8">
+                <button
+                  onClick={() => setActiveTab("profile")}
+                  className={`pb-5 text-lg font-medium ${
+                    activeTab === "profile"
+                      ? "text-teal-700 border-b-4 border-teal-600"
+                      : "text-slate-500"
+                  }`}
                 >
-                  {twoFactor ? "Enabled" : "Disabled"}
+                  Profile Details
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("security")}
+                  className={`pb-5 text-lg font-medium ${
+                    activeTab === "security"
+                      ? "text-teal-700 border-b-4 border-teal-600"
+                      : "text-slate-500"
+                  }`}
+                >
+                  Security
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                <div className="flex items-center gap-4">
-                  <Key className="w-6 h-6 text-gray-400" />
-                  <div>
-                    <h3 className="text-gray-900 font-bold">Login Anomaly Alerts</h3>
-                    <p className="text-gray-500 text-sm mt-0.5 font-medium">Identify suspicious location IPs</p>
+              {/* PROFILE TAB */}
+
+              {activeTab === "profile" && (
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                  <div className="p-8 border-b">
+                    <h2 className="text-2xl font-bold text-slate-900">
+                      Personal Information
+                    </h2>
+
+                    <p className="text-slate-500 mt-2 text-lg">
+                      Update your personal details visible to administration.
+                    </p>
+                  </div>
+
+                  <div className="p-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block mb-3 font-medium text-slate-700">
+                          Full Name
+                        </label>
+
+                        <input
+                          type="text"
+                          value={profile.full_name}
+                          onChange={(e) =>
+                            setProfile({
+                              ...profile,
+                              full_name: e.target.value,
+                            })
+                          }
+                          className="w-full border rounded-xl px-4 py-4"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block mb-3 font-medium text-slate-700">
+                          Email Address
+                        </label>
+
+                        <input
+                          type="email"
+                          value={profile.email}
+                          onChange={(e) =>
+                            setProfile({
+                              ...profile,
+                              email: e.target.value,
+                            })
+                          }
+                          className="w-full border rounded-xl px-4 py-4"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block mb-3 font-medium text-slate-700">
+                          Phone Number
+                        </label>
+
+                        <input
+                          type="text"
+                          value={profile.phone}
+                          onChange={(e) =>
+                            setProfile({
+                              ...profile,
+                              phone: e.target.value,
+                            })
+                          }
+                          className="w-full border rounded-xl px-4 py-4"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block mb-3 font-medium text-slate-700">
+                          Username
+                        </label>
+
+                        <input
+                          type="text"
+                          value={profile.username || ""}
+                          onChange={(e) =>
+                            setProfile({
+                              ...profile,
+                              username: e.target.value,
+                            })
+                          }
+                          className="w-full border rounded-xl px-4 py-4"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end mt-8">
+                      <button
+                        onClick={handleProfileUpdate}
+                        disabled={savingProfile}
+                        className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-semibold disabled:opacity-50"
+                      >
+                        {savingProfile ? "Saving..." : "Save Changes"}
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setLoginAlerts(!loginAlerts)}
-                  className={`px-5 py-2 rounded-xl font-bold transition-all text-sm ${loginAlerts ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"}`}
-                >
-                  {loginAlerts ? "Active" : "Paused"}
-                </button>
-              </div>
+              )}
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                <div className="flex items-center gap-4">
-                  <Globe className="w-6 h-6 text-gray-400" />
-                  <div>
-                    <h3 className="text-gray-900 font-bold">Session Expiry</h3>
-                    <p className="text-gray-500 text-sm mt-0.5 font-medium">Idle timeout duration</p>
+              {/* SECURITY TAB */}
+              {activeTab === "security" && (
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                  <div className="p-8 border-b">
+                    <h2 className="text-3xl font-bold text-slate-900">
+                      Change Password
+                    </h2>
+
+                    <p className="text-slate-500 mt-2">
+                      Ensure your account is using a strong password.
+                    </p>
+                  </div>
+
+                  <div className="p-8">
+                    <div>
+                      <label className="block mb-3 font-medium text-slate-700">
+                        Current Password
+                      </label>
+
+                      <div className="relative">
+                        <input
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="Enter current password"
+                          className="w-full border rounded-xl px-4 py-4 pr-12"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowCurrentPassword(!showCurrentPassword)
+                          }
+                          className="absolute right-4 top-4"
+                        >
+                          {showCurrentPassword ? (
+                            <EyeOff className="text-slate-400 w-5 h-5" />
+                          ) : (
+                            <Eye className="text-slate-400 w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8 mt-8">
+                      <div>
+                        <label className="block mb-3 font-medium text-slate-700">
+                          New Password
+                        </label>
+
+                        <div className="relative">
+                          <input
+                            type={showNewPassword ? "text" : "password"}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Enter new password"
+                            className="w-full border rounded-xl px-4 py-4 pr-12"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            className="absolute right-4 top-4"
+                          >
+                            {showNewPassword ? (
+                              <EyeOff className="text-slate-400 w-5 h-5" />
+                            ) : (
+                              <Eye className="text-slate-400 w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block mb-3 font-medium text-slate-700">
+                          Confirm Password
+                        </label>
+
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Confirm new password"
+                            className="w-full border rounded-xl px-4 py-4 pr-12"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            className="absolute right-4 top-4"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="text-slate-400 w-5 h-5" />
+                            ) : (
+                              <Eye className="text-slate-400 w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end mt-12">
+                      <button
+                        onClick={handlePasswordUpdate}
+                        disabled={updatingPassword}
+                        className="px-8 py-3 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 disabled:opacity-50"
+                      >
+                        {updatingPassword ? "Updating..." : "Update Password"}
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <select 
-                  value={sessionTimeout}
-                  onChange={(e) => setSessionTimeout(e.target.value)}
-                  className="bg-orange-100 text-orange-700 px-4 py-2 rounded-xl font-bold text-sm outline-none cursor-pointer appearance-none text-center"
-                >
-                  <option value="15 mins">15 mins</option>
-                  <option value="30 mins">30 mins</option>
-                  <option value="1 hour">1 hour</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* System Preferences */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-          <div className="flex items-center gap-3 mb-8 border-b border-gray-100 pb-4">
-             <div className="p-2.5 bg-blue-50 rounded-xl"><Layout className="w-6 h-6 text-blue-500" /></div>
-             <h2 className="text-2xl font-bold text-gray-900">Platform Preferences</h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {/* Theme */}
-            <div className="bg-[#F8FAFC] rounded-3xl p-6 border border-gray-100 flex flex-col justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Moon className="w-5 h-5 text-gray-400" /> UI Theme
-                </h3>
-                <p className="text-gray-500 mt-2 font-medium text-sm">Dashboard visual appearance.</p>
-              </div>
-              <button 
-                onClick={() => setDarkMode(!darkMode)}
-                className={`mt-6 px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${darkMode ? "bg-gray-900 text-white" : "bg-gray-200 text-gray-700"}`}
-              >
-                {darkMode ? <Moon className="w-4 h-4"/> : <Sun className="w-4 h-4"/>}
-                {darkMode ? "Dark Mode" : "Light Mode"}
-              </button>
-            </div>
-
-            {/* Notifications */}
-            <div className="bg-[#F8FAFC] rounded-3xl p-6 border border-gray-100 flex flex-col justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-gray-400" /> Global Alerts
-                </h3>
-                <p className="text-gray-500 mt-2 font-medium text-sm">Master switch for system emails.</p>
-              </div>
-              <button 
-                onClick={() => setNotifications(!notifications)}
-                className={`mt-6 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${notifications ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"}`}
-              >
-                {notifications ? "Broadcast Enabled" : "Muted"}
-              </button>
-            </div>
-
-            {/* API Settings */}
-            <div className="bg-[#F8FAFC] rounded-3xl p-6 border border-gray-100 flex flex-col justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-gray-400" /> External APIs
-                </h3>
-                <p className="text-gray-500 mt-2 font-medium text-sm">Data pipeline connections.</p>
-              </div>
-              <button className="mt-6 bg-blue-100 text-blue-600 px-5 py-2.5 rounded-xl font-bold text-sm transition-all">
-                Active & Synced
-              </button>
+              )}
             </div>
           </div>
         </div>

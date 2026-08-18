@@ -20,10 +20,10 @@ files.forEach(({ name, moduleKey }) => {
 
   let content = fs.readFileSync(filePath, 'utf8');
 
-  // Fix implicit return map: c.id === candidateId ? { ...c, status: "Under Verification", progress: (c.progress || 0) + 16 } : c
+  // Fix implicit return map: c.id === candidateId ? { ...c, status: "UNDER_VERIFICATION", progress: (c.progress || 0) + 16 } : c
   content = content.replace(
-    /c\.id === candidateId \? \{ \.\.\.c, status: "Under Verification", progress: \(c\.progress \|\| 0\) \+ 16 \} : c/g,
-    `c.id === candidateId ? { ...c, moduleStatuses: { ...(c.moduleStatuses || {}), "${moduleKey}": "Verified" }, status: "Under Verification", progress: Math.min(100, (c.progress || 0) + 15) } : c`
+    /c\.id === candidateId \? \{ \.\.\.c, status: "UNDER_VERIFICATION", progress: \(c\.progress \|\| 0\) \+ 16 \} : c/g,
+    `c.id === candidateId ? { ...c, moduleStatuses: { ...(c.moduleStatuses || {}), "${moduleKey}": "Verified" }, status: "UNDER_VERIFICATION", progress: Math.min(100, (c.progress || 0) + 15) } : c`
   );
 
   // Update filter logic

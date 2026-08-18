@@ -15,7 +15,7 @@ export const candidateService = {
     return response.data;
   },
 
-  // Update candidate status (e.g., "Request Sent", "Documents Uploaded")
+  // Update candidate status (e.g., "REQUEST_SENT", "DOCUMENTS_UPLOADED")
   updateCandidateStatus: async (id: number, status: string, progress: number) => {
     const response = await axios.patch(`/api/candidates/${id}/status`, { 
       status, 

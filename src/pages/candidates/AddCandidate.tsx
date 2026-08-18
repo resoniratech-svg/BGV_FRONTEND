@@ -2,18 +2,8 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, User, Mail, Phone, Calendar, Briefcase, MapPin, Check } from "lucide-react";
-
-interface Candidate {
-  id: number;
-  name: string;
-  first_name?: string;
-  last_name?: string;
-  email: string;
-  role: string;
-  status: string;
-  progress?: number;
-}
+import { ArrowLeft, User, Mail, Phone, Briefcase, Check } from "lucide-react";
+import { createCandidate } from "../../api/candidateApi";
 
 function AddCandidate() {
   const navigate = useNavigate();
@@ -23,15 +13,8 @@ function AddCandidate() {
     last_name: "",
     email: "",
     mobile_number: "",
-    date_of_birth: "",
-    gender: "",
-    job_role: "",
-    location: "",
-    current_address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    country: "",
+    company_name: "",
+    country: ""
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -70,16 +53,19 @@ function AddCandidate() {
     if (!formData.mobile_number.trim()) {
       newErrors.mobile_number = "Phone number is required";
     }
-    
-    if (!formData.date_of_birth) {
-      newErrors.date_of_birth = "Date of birth is required";
+
+    if (!formData.company_name.trim()) {
+      newErrors.company_name = "Company name is required";
     }
+    if (!formData.country.trim()) {
+    newErrors.country = "Country is required";
+  }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
@@ -87,46 +73,30 @@ function AddCandidate() {
       return;
     }
 
-    setIsSubmitting(true);
+    try {
+      setIsSubmitting(true);
 
-    setTimeout(() => {
-      const saved = localStorage.getItem("candidates");
-      const currentList = saved ? JSON.parse(saved) : [];
-
-      const emailExists = currentList.some(
-        (candidate: Candidate) => candidate.email.toLowerCase() === formData.email.toLowerCase()
-      );
-
-      if (emailExists) {
-        setIsSubmitting(false);
-        toast.error("Candidate with this email already exists");
-        return;
-      }
-
-      const newId = currentList.length > 0 
-        ? Math.max(...currentList.map((c: Candidate) => c.id)) + 1 
-        : 1;
-      
       const newCandidate = {
-        ...formData,
-        id: newId,
-        name: `${formData.first_name} ${formData.last_name}`.trim(),
-        first_name: formData.first_name.trim(),
-        last_name: formData.last_name.trim(),
-        email: formData.email,
-        role: formData.job_role || "Associate",
-        status: "Pending",
-        progress: 0,
-        createdAt: new Date().toISOString(),
-      };
+      first_name: formData.first_name.trim(),
+      last_name: formData.last_name.trim(),
+      email: formData.email,
+      phone: formData.mobile_number,
+      company_name: formData.company_name,
+      country: formData.country
+    };
 
-      localStorage.setItem("candidates", JSON.stringify([newCandidate, ...currentList]));
-
+      const response = await createCandidate(newCandidate);
+      console.log("Candidate Created:", response);
+      toast.success("Candidate added successfully.");
+      navigate("/candidates");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(
+        error?.response?.data?.message || "Failed to create candidate"
+      );
+    } finally {
       setIsSubmitting(false);
-      toast.success("Candidate added successfully. Ready to send verification request.");
-      
-      setTimeout(() => navigate("/candidates"), 1000);
-    }, 1500);
+    }
   };
 
   return (
@@ -252,55 +222,10 @@ function AddCandidate() {
                 )}
               </div>
 
-              {/* Date of Birth */}
+              {/* Company Name */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  Date of Birth <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-5 text-gray-400 pointer-events-none">
-                    <Calendar className="w-5 h-5" />
-                  </span>
-                  <input
-                    type="date"
-                    name="date_of_birth"
-                    value={formData.date_of_birth}
-                    onChange={handleChange}
-                    className={`w-full bg-[#F5F7FB] border rounded-2xl pl-12 pr-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 ${
-                      errors.date_of_birth ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-[#5B5FEF]"
-                    }`}
-                  />
-                </div>
-                {errors.date_of_birth && (
-                  <p className="text-red-500 text-xs font-medium pl-1">{errors.date_of_birth}</p>
-                )}
-              </div>
-
-              {/* Gender */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Gender
-                </label>
-                <div className="relative">
-                  <select
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleChange}
-                    className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-4 outline-none transition-all text-gray-700 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 focus:border-[#5B5FEF]"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                    <option value="Prefer not to say">Prefer not to say</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Role / Designation */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Role / Designation
+                  Company Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-5 text-gray-400">
@@ -308,122 +233,43 @@ function AddCandidate() {
                   </span>
                   <input
                     type="text"
-                    name="job_role"
-                    value={formData.job_role}
+                    name="company_name"
+                    value={formData.company_name}
                     onChange={handleChange}
-                    placeholder="e.g. Software Engineer"
-                    className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl pl-12 pr-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 focus:border-[#5B5FEF]"
+                    placeholder="Enter company name"
+                    className={`w-full bg-[#F5F7FB] border rounded-2xl pl-12 pr-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 ${
+                      errors.company_name ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-[#5B5FEF]"
+                    }`}
                   />
                 </div>
+                {errors.company_name && (
+                  <p className="text-red-500 text-xs font-medium pl-1">{errors.company_name}</p>
+                )}
               </div>
-
-              {/* Location */}
+              {/* country */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  Location
+                  Country <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-5 text-gray-400">
-                    <MapPin className="w-5 h-5" />
-                  </span>
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    placeholder="e.g. Mumbai, India"
-                    className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl pl-12 pr-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 focus:border-[#5B5FEF]"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Section 2: Address Details */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 space-y-6">
-            <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-              <div className="p-2 bg-[#E0F2FE] text-[#0284C7] rounded-xl">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900">Address Details</h2>
-            </div>
-
-            <div className="space-y-6">
-              {/* Current Address */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Current Address
-                </label>
-                <textarea
-                  name="current_address"
-                  value={formData.current_address}
+                <input
+                  type="text"
+                  name="country"
+                  value={formData.country}
                   onChange={handleChange}
-                  placeholder="Enter full street address"
-                  rows={3}
-                  className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 focus:border-[#5B5FEF] resize-none animate-none"
+                  placeholder="Enter country"
+                  className={`w-full bg-[#F5F7FB] border rounded-2xl px-5 py-4 outline-none transition-all ${
+                    errors.country
+                      ? "border-red-500"
+                      : "border-gray-200"
+                  }`}
                 />
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* City */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    placeholder="Enter City"
-                    className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 focus:border-[#5B5FEF]"
-                  />
-                </div>
-
-                {/* State */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    State
-                  </label>
-                  <input
-                    type="text"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    placeholder="Enter State"
-                    className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 focus:border-[#5B5FEF]"
-                  />
-                </div>
-
-                {/* Pincode */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Pincode
-                  </label>
-                  <input
-                    type="text"
-                    name="pincode"
-                    value={formData.pincode}
-                    onChange={handleChange}
-                    placeholder="Enter Pincode"
-                    className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 focus:border-[#5B5FEF]"
-                  />
-                </div>
-
-                {/* Country */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Country
-                  </label>
-                  <input
-                    type="text"
-                    name="country"
-                    value={formData.country}
-                    onChange={handleChange}
-                    placeholder="Enter Country"
-                    className="w-full bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-4 outline-none transition-all text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#5B5FEF]/20 focus:border-[#5B5FEF]"
-                  />
-                </div>
+                {errors.country && (
+                  <p className="text-red-500 text-xs">
+                    {errors.country}
+                  </p>
+                )}
               </div>
             </div>
           </div>

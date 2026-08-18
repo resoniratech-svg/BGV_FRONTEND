@@ -2,125 +2,126 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {  CheckCircle, AlertTriangle, ScanFace, ArrowLeft } from "lucide-react";
-import type { Candidate } from "../../types/Candidate";
+import { CheckCircle } from "lucide-react";
+import { useVerificationModule } from "../../hooks/useVerificationModule";
+import VerificationStatsCards from "../../components/verification/VerificationStatsCards";
 
 interface FaceMatchRequest {
   id: string;
   candidateId: number;
   candidate: string;
-  matchScore: string;
   status: string;
 }
 
 function FaceMatch() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [localCandidates, setLocalCandidates] = useState<Candidate[]>(() => 
-    JSON.parse(localStorage.getItem("candidates") || "[]")
-  );
+
+  // Integrated unified verification core hook system
+  const {
+    stats,
+    candidates,
+    activeFilter,
+    loadCandidatesByStatus
+  } = useVerificationModule("face-match");
 
   const verifyFaceMatch = (candidateId: number) => {
-    const freshMasterList: Candidate[] = JSON.parse(localStorage.getItem("candidates") || "[]");
-    
-    const updated = freshMasterList.map((c: Candidate) => 
-      c.id === candidateId ? { 
-        ...c, 
-        faceMatchStatus: "Completed",
-        status: "Under Verification", 
-        progress: (c.progress || 0) + 16 
-      } : c
-    );
-
-    localStorage.setItem("candidates", JSON.stringify(updated));
-    setLocalCandidates(updated);
-    alert("Biometric Face Match Completed Successfully.");
+    navigate(`/verification/candidate/${candidateId}`, {
+      state: {
+        from: "face-match"
+      }
+    });
   };
 
-  const requests: FaceMatchRequest[] = localCandidates
-    .filter((c: Candidate) => c.status !== "Verified" && c.faceMatchStatus !== "Completed")
-    .map((c: Candidate) => ({
-      id: `FMT-${1000 + c.id}`,
-      candidateId: c.id,
-      candidate: c.name || "Unknown",
-      matchScore: "94%",
-      status: "Pending",
-    }));
+  const requests: FaceMatchRequest[] = candidates.map((candidate) => ({
+    id: `FMT-${candidate.candidate_id}`,
+    candidateId: candidate.candidate_id,
+    candidate: candidate.candidate_name,
+    status: candidate.status || "PENDING"
+  }));
 
-  const filtered = requests.filter(r => r.candidate.toLowerCase().includes(search.toLowerCase()));
+  const filtered = requests.filter(r => 
+    (r.candidate && r.candidate.toLowerCase().includes(search.toLowerCase())) ||
+    r.id.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <DashboardLayout>
       <BackToVerification />
-      <div className="space-y-8 max-w-6xl mx-auto pb-12">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate("/verification")} className="p-3 bg-white border border-gray-100 hover:border-gray-200 rounded-2xl shadow-sm text-gray-600 hover:text-gray-900 transition-all">
-            <ArrowLeft className="w-6 h-6" />
-          </button>
+      <div className="space-y-8 max-w-6xl mx-auto pb-12 mt-4">
+        {/* Header Block */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">Face Match AI</h1>
             <p className="text-gray-500 mt-2">Biometric facial perimeter point auditing</p>
           </div>
+          <div className="bg-green-50 text-green-700 border border-green-100 px-5 py-4 rounded-2xl font-semibold text-sm shadow-sm flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            <span>Records generated automatically from Verification Queue</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><ScanFace className="w-6 h-6"/></div>
-                <div>
-                    <p className="text-sm text-gray-500">Active Queue</p>
-                    <h2 className="text-2xl font-bold">{requests.length}</h2>
-                </div>
-            </div>
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-green-50 text-green-600 rounded-2xl"><CheckCircle className="w-6 h-6"/></div>
-                <div>
-                    <p className="text-sm text-gray-500">Verified</p>
-                    <h2 className="text-2xl font-bold">{localCandidates.filter(c => c.faceMatchStatus === "Completed").length}</h2>
-                </div>
-            </div>
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-red-50 text-red-600 rounded-2xl"><AlertTriangle className="w-6 h-6"/></div>
-                <div>
-                    <p className="text-sm text-gray-500">Fraud Alerts</p>
-                    <h2 className="text-2xl font-bold">0</h2>
-                </div>
-            </div>
-        </div>
+        {/* Dynamic Analytics Stats Panel via modular hook system */}
+        <VerificationStatsCards
+          stats={stats}
+          activeFilter={activeFilter}
+          onFilterChange={loadCandidatesByStatus}
+        />
 
+        {/* Verification Operational Logging Matrix Container */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-4 bg-white flex-wrap">
+            <h2 className="text-xl font-bold text-gray-900">Biometric Identity Audit Logs</h2>
             <input
               type="text"
-              placeholder="Search candidates..."
+              placeholder="Search by name or ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-3.5 w-full sm:w-[320px] outline-none text-sm"
+              className="bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-3.5 w-full sm:w-[320px] outline-none text-sm focus:bg-white focus:border-[#5B5FEF] transition-all"
             />
           </div>
-          <table className="w-full">
-            <thead className="bg-[#F8FAFC]">
-              <tr>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500">Request ID</th>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500">Candidate</th>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500">Match Score</th>
-                <th className="p-6 text-center text-xs font-semibold text-gray-500">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map(item => (
-                <tr key={item.id}>
-                  <td className="p-6 font-bold text-sm">{item.id}</td>
-                  <td className="p-6 font-semibold text-sm">{item.candidate}</td>
-                  <td className="p-6 font-bold text-sm text-blue-600">{item.matchScore}</td>
-                  <td className="p-6 text-center">
-                    <button onClick={() => verifyFaceMatch(item.candidateId)} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all">
-                      Verify Biometrics
-                    </button>
-                  </td>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[850px]">
+              <thead className="bg-[#F8FAFC]">
+                <tr>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Request ID</th>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Candidate Target</th>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="p-6 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.length > 0 ? (
+                  filtered.map(item => (
+                    <tr key={item.id} className="hover:bg-[#FAFBFF] transition-all">
+                      <td className="p-6 font-bold text-sm text-gray-900">{item.id}</td>
+                      <td className="p-6 text-sm text-gray-800 font-semibold">{item.candidate}</td>
+                      <td className="p-6">
+                        <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-100">
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="p-6 text-center">
+                        <button 
+                          onClick={() => verifyFaceMatch(item.candidateId)} 
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+                        >
+                          Verify Identity
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="p-16 text-center text-gray-400 font-medium text-sm">
+                      No active biometric verification requests pending.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </DashboardLayout>

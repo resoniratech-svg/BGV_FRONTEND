@@ -26,7 +26,7 @@ function OCRVerification() {
       c.id === candidateId ? { 
         ...c, 
         ocrVerified: true,
-        status: "Under Verification", 
+        status: "UNDER_VERIFICATION", 
         progress: (c.progress || 0) + 16 
       } : c
     );

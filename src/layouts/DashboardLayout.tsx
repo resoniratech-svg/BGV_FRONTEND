@@ -39,7 +39,7 @@ function DashboardLayout({
         <Navbar toggleSidebar={() => setIsSidebarOpen(true)} />
 
         {/* Page Content */}
-        <main ref={mainRef} className="flex-1 p-8 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 px-8 pt-14 pb-8 overflow-y-auto">
           {children}
         </main>
 

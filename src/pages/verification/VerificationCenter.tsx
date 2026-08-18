@@ -1,11 +1,18 @@
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
-import { 
-  ShieldCheck, CreditCard, FileText, UserCheck, ScanSearch, 
-  Brain, GraduationCap, Briefcase, Wallet, Scale, Globe 
+import {
+  ShieldCheck,
+  CreditCard,
+  FileText,
+  UserCheck,
+  ScanSearch,
+  Brain,
+  GraduationCap,
+  Briefcase,
+  Wallet,
+  Scale,
+  Globe,
 } from "lucide-react";
-import type { Candidate } from "../../types/Candidate";
 
 const verificationGroups = [
   {
@@ -40,38 +47,40 @@ const verificationGroups = [
 ];
 
 function VerificationCenter() {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("candidates");
-    if (saved) setCandidates(JSON.parse(saved));
-  }, []);
-
-  const underVerificationCount = candidates.filter(c => c.status === "Under Verification").length;
-
   return (
     <DashboardLayout>
       <div className="space-y-10 max-w-7xl mx-auto pb-12">
-        
-        {/* Header & Operational Snapshot */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900">Verification Center</h1>
-            <p className="text-slate-500 mt-2">Manage identity, AI, and background verification modules.</p>
+            <h1 className="text-4xl font-bold text-slate-900">
+              Verification Center
+            </h1>
+            <p className="text-slate-500 mt-2">
+              Manage identity, AI, and background verification modules.
+            </p>
           </div>
-          <div className="bg-white border border-indigo-100 p-4 rounded-3xl shadow-sm">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Verifications</p>
-            <p className="text-3xl font-black text-indigo-600">{underVerificationCount}</p>
-          </div>
+
+          {/* <div className="bg-white border border-indigo-100 p-4 rounded-3xl shadow-sm">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              Active Verifications
+            </p>
+
+            <p className="text-3xl font-black text-indigo-600">
+              0
+            </p>
+          </div> */}
         </div>
 
-        {/* Verification Groups */}
         {verificationGroups.map((group) => (
           <div key={group.title}>
-            <h2 className="text-2xl font-bold text-slate-800 mb-5">{group.title}</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-5">
+              {group.title}
+            </h2>
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {group.items.map((item) => {
                 const Icon = item.icon;
+
                 return (
                   <Link
                     key={item.name}
@@ -80,11 +89,20 @@ function VerificationCenter() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center group-hover:bg-[#5B5FEF] transition-colors">
-                        <Icon size={22} className="text-[#5B5FEF] group-hover:text-white transition-colors" />
+                        <Icon
+                          size={22}
+                          className="text-[#5B5FEF] group-hover:text-white transition-colors"
+                        />
                       </div>
+
                       <div>
-                        <h3 className="font-semibold text-slate-900 text-lg">{item.name}</h3>
-                        <p className="text-sm text-slate-500 mt-1">Open verification module</p>
+                        <h3 className="font-semibold text-slate-900 text-lg">
+                          {item.name}
+                        </h3>
+
+                        <p className="text-sm text-slate-500 mt-1">
+                          Open verification module
+                        </p>
                       </div>
                     </div>
                   </Link>

@@ -32,7 +32,7 @@ files.forEach(({ name, moduleKey }) => {
     `return {
           ...candidate,
           moduleStatuses: { ...(candidate.moduleStatuses || {}), "${moduleKey}": "Verified" },
-          status: "Under Verification",
+          status: "UNDER_VERIFICATION",
           progress: Math.min(100, (candidate.progress || 0) + 15),
         };
       }`

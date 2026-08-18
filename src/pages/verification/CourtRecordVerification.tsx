@@ -1,13 +1,10 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
-import {
-  CheckCircle,
-  AlertTriangle,
-  Clock,
-  Database,
-} from "lucide-react";
-import type { Candidate } from "../../types/Candidate";
+import { useNavigate } from "react-router-dom";
+import { CheckCircle } from "lucide-react";
+import { useVerificationModule } from "../../hooks/useVerificationModule";
+import VerificationStatsCards from "../../components/verification/VerificationStatsCards";
 
 interface CourtRequest {
   id: string;
@@ -19,45 +16,35 @@ interface CourtRequest {
 }
 
 function CourtRecordVerification() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [localCandidates, setLocalCandidates] = useState<Candidate[]>(() => {
-    return JSON.parse(localStorage.getItem("candidates") || "[]");
-  });
 
-  // Verification Logic: Updates the candidate record and persists to localStorage
+  // Integrated unified verification core hook system
+  const {
+    stats,
+    candidates,
+    activeFilter,
+    loadCandidatesByStatus
+  } = useVerificationModule("court");
+
   const verifyCourtRecord = (candidateId: number) => {
-    const freshMasterList: Candidate[] = JSON.parse(localStorage.getItem("candidates") || "[]");
-    
-    const updated = freshMasterList.map((c: Candidate) => {
-      if (c.id === candidateId) {
-        return {
-          ...c,
-          // Assuming courtRecordStatus as a field in your global Candidate type
-          status: "Under Verification",
-          progress: (c.progress || 0) + 16, 
-        };
+    navigate(`/verification/candidate/${candidateId}`, {
+      state: {
+        from: "court"
       }
-      return c;
     });
-
-    localStorage.setItem("candidates", JSON.stringify(updated));
-    setLocalCandidates(updated);
-    alert("Court Record Verified Successfully.");
   };
 
-  // Filter candidates waiting for this specific module
-  const courtRequests: CourtRequest[] = localCandidates
-    .filter((c: Candidate) => c.status !== "Verified" && c.status !== "Rejected")
-    .map((c: Candidate, _index: number) => ({
-      id: `CRT-${1000 + c.id}`,
-      candidateId: c.id,
-      candidate: c.name || "Unknown",
-      courtRecordId: "CR-" + Math.floor(Math.random() * 9000),
-      caseType: "Civil/Criminal",
-      status: "Pending",
-    }));
+  const courtRequests: CourtRequest[] = candidates.map((candidate) => ({
+    id: `CRT-${candidate.candidate_id}`,
+    candidateId: candidate.candidate_id,
+    candidate: candidate.candidate_name,
+    courtRecordId: `CR-${candidate.candidate_id}`,
+    caseType: "Civil/Criminal",
+    status: candidate.status || "PENDING",
+  }));
 
-  const filteredRequests = courtRequests.filter((item) =>
+  const filteredRequests = courtRequests.filter((item: CourtRequest) =>
     item.candidate.toLowerCase().includes(search.toLowerCase()) ||
     item.id.toLowerCase().includes(search.toLowerCase())
   );
@@ -65,7 +52,8 @@ function CourtRecordVerification() {
   return (
     <DashboardLayout>
       <BackToVerification />
-      <div className="space-y-8 max-w-6xl mx-auto pb-12">
+      <div className="space-y-8 max-w-6xl mx-auto pb-12 mt-4">
+        {/* Header Block */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">Court Record Verification</h1>
@@ -77,81 +65,69 @@ function CourtRecordVerification() {
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Active Queue</p>
-              <h2 className="text-4xl font-bold mt-2">{courtRequests.length}</h2>
-            </div>
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Database className="w-5 h-5" /></div>
-          </div>
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Clean Records</p>
-              <h2 className="text-4xl font-bold mt-2 text-green-500">{localCandidates.filter(c => c.moduleStatuses?.["Court Record"] === "Verified").length}</h2>
-            </div>
-            <div className="p-3 bg-green-50 text-green-500 rounded-2xl"><CheckCircle className="w-5 h-5" /></div>
-          </div>
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Under Review</p>
-              <h2 className="text-4xl font-bold mt-2 text-yellow-500">{courtRequests.length}</h2>
-            </div>
-            <div className="p-3 bg-yellow-50 text-yellow-500 rounded-2xl"><Clock className="w-5 h-5" /></div>
-          </div>
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Legal Alerts</p>
-              <h2 className="text-4xl font-bold mt-2 text-red-500">0</h2>
-            </div>
-            <div className="p-3 bg-red-50 text-red-500 rounded-2xl"><AlertTriangle className="w-5 h-5" /></div>
-          </div>
-        </div>
+        {/* Modular Analytics Stats Block */}
+        <VerificationStatsCards
+          stats={stats}
+          activeFilter={activeFilter}
+          onFilterChange={loadCandidatesByStatus}
+        />
 
-        {/* Verification Table */}
+        {/* Verification Operational Logging Matrix Container */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-4">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4 bg-white">
             <h2 className="text-xl font-bold text-gray-900">Audit Task Logs</h2>
             <input
               type="text"
-              placeholder="Search tasks..."
+              placeholder="Search by name or ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-3 outline-none w-[320px] text-sm"
+              className="bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-3.5 outline-none w-full sm:w-[320px] text-sm focus:bg-white focus:border-[#5B5FEF] transition-all"
             />
           </div>
-          <table className="w-full">
-            <thead className="bg-[#F8FAFC]">
-              <tr>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase">Request ID</th>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase">Candidate</th>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase">Case Type</th>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                <th className="p-6 text-center text-xs font-semibold text-gray-500 uppercase">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredRequests.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="p-6 font-bold text-sm">{item.id}</td>
-                  <td className="p-6 text-sm font-semibold">{item.candidate}</td>
-                  <td className="p-6 text-sm text-gray-600">{item.caseType}</td>
-                  <td className="p-6 text-sm">
-                    <span className="bg-amber-50 text-amber-600 px-3 py-1 rounded-full text-xs font-bold border border-amber-100">{item.status}</span>
-                  </td>
-                  <td className="p-6 text-center">
-                    <button 
-                      onClick={() => verifyCourtRecord(item.candidateId)}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all"
-                    >
-                      Verify Record
-                    </button>
-                  </td>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[850px]">
+              <thead className="bg-[#F8FAFC]">
+                <tr>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Request ID</th>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Candidate Target</th>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Case Type</th>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="p-6 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredRequests.length > 0 ? (
+                  filteredRequests.map((item) => (
+                    <tr key={item.id} className="hover:bg-[#FAFBFF] transition-all">
+                      <td className="p-6 font-bold text-gray-900 text-sm">{item.id}</td>
+                      <td className="p-6 text-sm text-gray-800 font-semibold">{item.candidate}</td>
+                      <td className="p-6 text-sm text-gray-600">{item.caseType}</td>
+                      <td className="p-6">
+                        <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-100">
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="p-6 text-center">
+                        <button 
+                          onClick={() => verifyCourtRecord(item.candidateId)}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all"
+                        >
+                          Verify Record
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="p-16 text-center text-gray-400 font-medium text-sm">
+                      No active court verification requests pending.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </DashboardLayout>

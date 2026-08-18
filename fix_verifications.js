@@ -35,7 +35,7 @@ files.forEach(({ name, moduleKey }) => {
         return {
           ...candidate,
           aadhaarStatus: "Completed",
-          status: "Under Verification",
+          status: "UNDER_VERIFICATION",
           progress: (candidate.progress || 0) + 16,
         };
       }
@@ -49,7 +49,7 @@ files.forEach(({ name, moduleKey }) => {
     `return {
           ...candidate,
           moduleStatuses: { ...(candidate.moduleStatuses || {}), "${moduleKey}": "Verified" },
-          status: "Under Verification",
+          status: "UNDER_VERIFICATION",
           progress: Math.min(100, (candidate.progress || 0) + 15),
         };
       }`

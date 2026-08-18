@@ -1,16 +1,15 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CheckCircle,
-  AlertTriangle,
   CreditCard,
   ShieldCheck,
   TrendingUp,
-  Clock,
-  Database,
 } from "lucide-react";
-import type { Candidate } from "../../types/Candidate";
+import { useVerificationModule } from "../../hooks/useVerificationModule";
+import VerificationStatsCards from "../../components/verification/VerificationStatsCards";
 
 interface CreditCheckRequest {
   id: string;
@@ -23,44 +22,35 @@ interface CreditCheckRequest {
 
 function CreditBureauCheck() {
   const [search, setSearch] = useState("");
-  const [localCandidates, setLocalCandidates] = useState<Candidate[]>(() => {
-    return JSON.parse(localStorage.getItem("candidates") || "[]");
-  });
+  const navigate = useNavigate();
 
-  // Workflow Trigger: Updates candidate progress and verification status
+  // Integrated unified verification core hook system
+  const {
+    stats,
+    candidates,
+    activeFilter,
+    loadCandidatesByStatus
+  } = useVerificationModule("credit");
+
   const verifyCreditBureau = (candidateId: number) => {
-    const freshMasterList: Candidate[] = JSON.parse(localStorage.getItem("candidates") || "[]");
-    
-    const updated = freshMasterList.map((c: Candidate) => {
-      if (c.id === candidateId) {
-        return {
-          ...c,
-          status: "Under Verification",
-          progress: (c.progress || 0) + 16, // Increment module progress
-        };
+    navigate(`/verification/candidate/${candidateId}`, {
+      state: {
+        from: "credit"
       }
-      return c;
     });
-
-    localStorage.setItem("candidates", JSON.stringify(updated));
-    setLocalCandidates(updated);
-    alert("Credit Bureau check verified successfully.");
   };
 
-  // Only show candidates currently in the pipeline
-  const creditRequests: CreditCheckRequest[] = localCandidates
-    .filter((c: Candidate) => c.status !== "Verified" && c.status !== "Rejected")
-    .map((c: Candidate) => ({
-      id: `CRD-${1000 + c.id}`,
-      candidateId: c.id,
-      candidate: c.name || "Unknown",
-      creditScore: "750",
-      riskCategory: "Low",
-      bureauStatus: "Pending",
-    }));
+  const creditRequests: CreditCheckRequest[] = candidates.map((candidate) => ({
+    id: `CRD-${candidate.candidate_id}`,
+    candidateId: candidate.candidate_id,
+    candidate: candidate.candidate_name,
+    creditScore: "750",
+    riskCategory: "Low",
+    bureauStatus: candidate.status || "PENDING",
+  }));
 
   const filteredRequests = creditRequests.filter(
-    (item) =>
+    (item: CreditCheckRequest) =>
       item.candidate.toLowerCase().includes(search.toLowerCase()) ||
       item.id.toLowerCase().includes(search.toLowerCase())
   );
@@ -68,7 +58,7 @@ function CreditBureauCheck() {
   return (
     <DashboardLayout>
       <BackToVerification />
-      <div className="space-y-8 max-w-6xl mx-auto pb-12">
+      <div className="space-y-8 max-w-6xl mx-auto pb-12 mt-4">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -81,37 +71,12 @@ function CreditBureauCheck() {
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Active Pipeline Queue</p>
-              <h2 className="text-4xl font-bold mt-2">{creditRequests.length}</h2>
-            </div>
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Database className="w-5 h-5" /></div>
-          </div>
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Good Standing</p>
-              <h2 className="text-4xl font-bold mt-2 text-green-500">{localCandidates.filter(c => c.moduleStatuses?.["Credit Bureau"] === "Verified").length}</h2>
-            </div>
-            <div className="p-3 bg-green-50 text-green-500 rounded-2xl"><CheckCircle className="w-5 h-5" /></div>
-          </div>
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Under Review</p>
-              <h2 className="text-4xl font-bold mt-2 text-yellow-500">{creditRequests.length}</h2>
-            </div>
-            <div className="p-3 bg-yellow-50 text-yellow-500 rounded-2xl"><Clock className="w-5 h-5" /></div>
-          </div>
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">High Risk Alerts</p>
-              <h2 className="text-4xl font-bold mt-2 text-red-500">0</h2>
-            </div>
-            <div className="p-3 bg-red-50 text-red-500 rounded-2xl"><AlertTriangle className="w-5 h-5" /></div>
-          </div>
-        </div>
+        {/* Dynamic Analytics Stats Panel via modular hook system */}
+        <VerificationStatsCards
+          stats={stats}
+          activeFilter={activeFilter}
+          onFilterChange={loadCandidatesByStatus}
+        />
 
         {/* AI Modules */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -138,49 +103,62 @@ function CreditBureauCheck() {
           </div>
         </div>
 
-        {/* Requests Table */}
+        {/* Requests Table Container */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-4">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4 bg-white">
             <h2 className="text-xl font-bold text-gray-900">Audit Task Logs</h2>
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search by name or ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-3 outline-none w-[320px] text-sm"
+              className="bg-[#F5F7FB] border border-gray-200 rounded-2xl px-5 py-3.5 outline-none w-full sm:w-[320px] text-sm focus:bg-white focus:border-[#5B5FEF] transition-all"
             />
           </div>
-          <table className="w-full">
-            <thead className="bg-[#F8FAFC]">
-              <tr>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase">Request ID</th>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase">Candidate</th>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase">Credit Score</th>
-                <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                <th className="p-6 text-center text-xs font-semibold text-gray-500 uppercase">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredRequests.map((item) => (
-                <tr key={item.id}>
-                  <td className="p-6 font-bold text-sm">{item.id}</td>
-                  <td className="p-6 text-sm font-semibold">{item.candidate}</td>
-                  <td className="p-6 text-sm text-gray-600">{item.creditScore}</td>
-                  <td className="p-6">
-                    <span className="bg-amber-50 text-amber-600 px-3 py-1 rounded-full text-xs font-bold border border-amber-100">{item.bureauStatus}</span>
-                  </td>
-                  <td className="p-6 text-center">
-                    <button 
-                      onClick={() => verifyCreditBureau(item.candidateId)}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all"
-                    >
-                      Verify Credit
-                    </button>
-                  </td>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[850px]">
+              <thead className="bg-[#F8FAFC]">
+                <tr>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Request ID</th>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Candidate Target</th>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Credit Score</th>
+                  <th className="p-6 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="p-6 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredRequests.length > 0 ? (
+                  filteredRequests.map((item) => (
+                    <tr key={item.id} className="hover:bg-[#FAFBFF] transition-all">
+                      <td className="p-6 font-bold text-gray-900 text-sm">{item.id}</td>
+                      <td className="p-6 text-sm font-semibold text-gray-800">{item.candidate}</td>
+                      <td className="p-6 text-sm text-gray-600 font-medium">{item.creditScore}</td>
+                      <td className="p-6">
+                        <span className="bg-amber-50 text-amber-600 px-3 py-1.5 rounded-full text-xs font-bold border border-amber-100">
+                          {item.bureauStatus}
+                        </span>
+                      </td>
+                      <td className="p-6 text-center">
+                        <button 
+                          onClick={() => verifyCreditBureau(item.candidateId)}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all"
+                        >
+                          Verify Credit
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="p-16 text-center text-gray-400 font-medium text-sm">
+                      No active credit check requests pending.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </DashboardLayout>
