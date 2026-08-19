@@ -76,7 +76,7 @@ import BankStatementResultView from "../../components/verification/BankStatement
 import CourtRecordResultView from "../../components/verification/CourtRecordResultView";
 import SalarySlipVerificationCard from "../../components/verification/SalarySlipVerificationCard";
 
-import PANVerificationCard from "../../components/verification/PANVerificationCard";
+import PanVerificationCard from "../../components/verification/PanVerificationCard";
 import {
   verifyFaceMatch,
   getFaceMatchResult,
@@ -3399,7 +3399,7 @@ function CandidateVerificationCenter() {
                             />
                           )}
                           {moduleConfig?.type === "pan" && (
-                            <PANVerificationCard
+                            <PanVerificationCard
                               status={status || ""}
                               matchStatus={panMatchStatus}
                               // ISSUE 3: Retained decisionStatus["PAN"] as required
