@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, ExternalLink } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
+import { extractArray } from "../../utils/safeArray";
 
 import { getCandidates } from "../../api/candidateApi";
 
@@ -33,7 +34,7 @@ function VerificationQueue() {
     try {
       const response = await getCandidates();
 
-      setLocalCandidates(response);
+      setLocalCandidates(extractArray(response));
     } catch (error) {
       console.error(error);
     }
@@ -41,7 +42,8 @@ function VerificationQueue() {
 
   // Map candidates to Queue Items based on their workflow status
   // Only showing those that are in progress or need review
-  const queueData: QueueItem[] = localCandidates
+  const safeCandidates = extractArray(localCandidates);
+  const queueData: QueueItem[] = safeCandidates
     .filter(
       (candidate) =>
         candidate.status === "DOCUMENTS_UPLOADED" ||

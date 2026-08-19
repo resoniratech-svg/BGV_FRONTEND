@@ -1,6 +1,7 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { extractArray } from "../../utils/safeArray";
 
 import {
   Search,
@@ -62,15 +63,16 @@ function AuditLogs() {
     try {
       const logsData = await getAuditLogs();
       const statsData = await getAuditStats();
-      setLogs(logsData);
-      setStats(statsData);
+      setLogs(extractArray(logsData));
+      setStats(statsData || { total: 0, success: 0, warning: 0, critical: 0 });
     } catch (err) {
       console.log(err);
     }
   };
 
   // 2. Multi-tier filter pipeline compounding structural search queries and active card filters
-  const filteredLogs = logs.filter((log) => {
+  const safeLogs = extractArray(logs);
+  const filteredLogs = safeLogs.filter((log) => {
     const query = searchQuery.toLowerCase();
 
     const matchesSearch =

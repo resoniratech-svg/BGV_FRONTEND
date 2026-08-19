@@ -1,5 +1,6 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useEffect, useMemo, useState } from "react";
+import { extractArray } from "../../utils/safeArray";
 
 import {
   Bell,
@@ -46,7 +47,7 @@ function Notifications() {
     try {
       const data = await getNotifications();
       console.log(data);
-      setNotifications(data ?? []);
+      setNotifications(extractArray(data));
     } catch (error) {
       console.error(error);
     }
@@ -78,14 +79,16 @@ function Notifications() {
     }
   };
 
+  const safeNotifications = useMemo(() => extractArray(notifications), [notifications]);
+
   const filteredNotifications = useMemo(() => {
-    return notifications.filter((item) => {
+    return safeNotifications.filter((item) => {
       const query = searchQuery.toLowerCase();
 
       const matchesSearch =
-        item.title.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query) ||
-        item.type.toLowerCase().includes(query);
+        (item.title || "").toLowerCase().includes(query) ||
+        (item.description || "").toLowerCase().includes(query) ||
+        (item.type || "").toLowerCase().includes(query);
 
       if (!matchesSearch) return false;
 
