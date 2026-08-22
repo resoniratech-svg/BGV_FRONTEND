@@ -433,7 +433,7 @@ function EditCandidate() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [originalCandidate, setOriginalCandidate] = useState<Candidate | null>(
+  const [, setOriginalCandidate] = useState<Candidate | null>(
     null,
   );
 

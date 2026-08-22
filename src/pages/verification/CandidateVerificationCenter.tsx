@@ -3,7 +3,6 @@ import VerificationModuleCard from "../../components/verification/VerificationMo
 import VerificationResultModal from "../../components/verification/VerificationResultModal";
 import VerificationCard from "../../components/verification/VerificationCard";
 import { verificationModules } from "../../types/verificationModules";
-import { executeVerification } from "../../services/verificationExecutor";
 import WatchlistResultView from "../../components/verification/WatchlistResultView";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useParams, useNavigate } from "react-router-dom";
@@ -55,7 +54,6 @@ import {
   saveEmploymentDecision,
 } from "../../api/employmentApi";
 import {
-  verifyCreditBureau,
   getCreditBureauResult,
   saveCreditBureauDecision,
 } from "../../api/creditBureauApi";
@@ -76,7 +74,7 @@ import BankStatementResultView from "../../components/verification/BankStatement
 import CourtRecordResultView from "../../components/verification/CourtRecordResultView";
 import SalarySlipVerificationCard from "../../components/verification/SalarySlipVerificationCard";
 
-import PanVerificationCard from "../../components/verification/PanVerificationCard";
+import PANVerificationCard from "../../components/verification/PanVerificationCard";
 import {
   verifyFaceMatch,
   getFaceMatchResult,
@@ -93,7 +91,12 @@ type VerificationStatus =
   | "Not Verified"
   | "Fraud"
   | "Rejected"
-  | "Unknown";
+  | "Unknown"
+  | "PASSED"
+  | "FAILED"
+  | "FLAGGED"
+  | "Pending"
+  | "In Progress";
 
 function CandidateVerificationCenter() {
   const { id } = useParams<{ id: string }>();
@@ -123,10 +126,10 @@ function CandidateVerificationCenter() {
   >({});
   const [watchlistResult, setWatchlistResult] = useState<any>(null);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
-  const [ocrResult, setOcrResult] = useState<any>(null);
+  const [, setOcrResult] = useState<any>(null);
 
   const [showOCRDocumentSelector, setShowOCRDocumentSelector] = useState(false);
-  const [showOCRResult, setShowOCRResult] = useState(false);
+  const [, setShowOCRResult] = useState(false);
   const [salarySlipResult, setSalarySlipResult] = useState<any>(null);
   const [employmentResult, setEmploymentResult] = useState<any>(null);
   const [creditBureauResult, setCreditBureauResult] = useState<any>(null);
@@ -141,7 +144,7 @@ function CandidateVerificationCenter() {
   const [showFaceMatchResult, setShowFaceMatchResult] = useState(false);
   const [faceMatchSelfieUrl, setFaceMatchSelfieUrl] = useState("");
   const [faceMatchAadhaarUrl, setFaceMatchAadhaarUrl] = useState("");
-  const [faceMatchRisk, setFaceMatchRisk] = useState("LOW");
+  const [, setFaceMatchRisk] = useState("LOW");
   const [faceMatchStatus, setFaceMatchStatus] = useState("");
   // FIX 1: Default to empty string instead of "Match"
   const [panMatchStatus, setPanMatchStatus] = useState("");
@@ -153,7 +156,7 @@ function CandidateVerificationCenter() {
 
   const [showSalarySlipResult, setShowSalarySlipResult] = useState(false);
   const [salarySlipRisk] = useState("LOW");
-  const [salarySlipDecision, setSalarySlipDecision] = useState("Verified");
+  const [, setSalarySlipDecision] = useState("Verified");
   const [ocrDocuments, setOcrDocuments] = useState<any[]>([]);
   const [resumeDocumentId, setResumeDocumentId] = useState<number | null>(null);
 
@@ -698,13 +701,13 @@ function CandidateVerificationCenter() {
 
         if (!creditBureauResult) {
           console.log(
-            "CREDIT BUREAU: No detailed result found, using summary status.",
+            "CREDIT BUREAU: No detailed result found, checking summary status.",
           );
 
           setCreditBureauResult(null);
 
           if (
-            ["Verified", "Not Verified", "Fraud", "Rejected"].includes(
+            ["Verified", "Fraud", "Rejected"].includes(
               summary.credit_status,
             )
           ) {
@@ -717,7 +720,13 @@ function CandidateVerificationCenter() {
               ...prev,
               "Credit Bureau": summary.credit_status,
             }));
+          } else {
+            setModuleStatuses((prev) => ({
+              ...prev,
+              "Credit Bureau": null,
+            }));
           }
+          return;
         }
 
         // =====================================================
@@ -726,15 +735,9 @@ function CandidateVerificationCenter() {
 
         setCreditBureauResult(creditResult);
 
-        // A result exists, so the card should show:
-        // View Result
-        // Risk
-        // Decision
-        // Reverify
-
         setModuleStatuses((prev) => ({
           ...prev,
-          "Credit Bureau": summary.credit_status || "Not Verified",
+          "Credit Bureau": summary.credit_status || "Verified",
         }));
 
         console.log("CREDIT BUREAU RESULT EXISTS - CARD COMPLETED");
@@ -1491,17 +1494,11 @@ function CandidateVerificationCenter() {
     },
   ];
 
-  const callVerificationAPI = async (
-    _moduleName: string,
-  ): Promise<VerificationStatus> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve("Verified");
-      }, 1500);
-    });
-  };
+
 
   const handleVerify = async (moduleName: string) => {
+    if (!candidate) return;
+
     setVerifying((prev) => ({
       ...prev,
       [moduleName]: true,
@@ -1665,7 +1662,7 @@ function CandidateVerificationCenter() {
 
         const response = await verifyPAN(
           Number(id),
-          candidate.bgv_id,
+          candidate.bgv_id || "",
           panDoc.id,
         );
         const result = await getPANResult(Number(id));
@@ -2156,7 +2153,7 @@ function CandidateVerificationCenter() {
           return;
         }
 
-        await verifyFaceMatch(Number(id), candidate.bgv_id, selfie.id);
+        await verifyFaceMatch(Number(id), candidate.bgv_id || "", selfie.id);
 
         const result = await getFaceMatchResult(Number(id));
 
@@ -2212,12 +2209,7 @@ function CandidateVerificationCenter() {
           return;
         }
 
-        const response = await verifyDeepfake(
-          Number(id),
-
-          candidate.bgv_id,
-          selfie.id,
-        );
+        const response = await verifyDeepfake(Number(id));
 
         const result = await getDeepfakeResult(Number(id));
 
@@ -2910,6 +2902,13 @@ function CandidateVerificationCenter() {
                 const moduleConfig =
                   verificationModules[item as keyof typeof verificationModules];
                 const moduleKey = moduleConfig?.key || item;
+                const isModuleCompleted =
+                  status !== null &&
+                  status !== undefined &&
+                  !(
+                    item === "Credit Bureau" &&
+                    (status === "Not Verified" || status === "Unknown")
+                  );
 
                 return (
                   <VerificationCard
@@ -2924,7 +2923,7 @@ function CandidateVerificationCenter() {
                     verifying={isVerifying}
                   >
                     <div className="flex items-center gap-2">
-                      {status ? (
+                      {isModuleCompleted ? (
                         <>
                           {moduleConfig?.type === "aadhaar" && (
                             <VerificationModuleCard
@@ -3388,7 +3387,7 @@ function CandidateVerificationCenter() {
                                   }));
                                   setModuleStatuses((prev) => ({
                                     ...prev,
-                                    Watchlist: decision,
+                                    Watchlist: decision as VerificationStatus,
                                   }));
                                   await loadCandidate();
                                 } catch (error) {
@@ -3399,7 +3398,7 @@ function CandidateVerificationCenter() {
                             />
                           )}
                           {moduleConfig?.type === "pan" && (
-                            <PanVerificationCard
+                            <PANVerificationCard
                               status={status || ""}
                               matchStatus={panMatchStatus}
                               // ISSUE 3: Retained decisionStatus["PAN"] as required
@@ -3780,6 +3779,7 @@ function CandidateVerificationCenter() {
                                 handleVerify("Bank Statement");
                               }}
                               onViewResult={async () => {
+                                if (!candidate) return;
                                 try {
                                   console.log(
                                     "========== LOADING BANK STATEMENT RESULT ==========",
@@ -3787,7 +3787,7 @@ function CandidateVerificationCenter() {
 
                                   const result = await getBankStatementResult(
                                     Number(id),
-                                    candidate.bgv_id,
+                                    candidate.bgv_id || "",
                                   );
 
                                   console.log("BANK STATEMENT RESULT:", result);

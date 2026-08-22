@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { extractArray } from "../utils/safeArray";
 
 import {
   getCandidates
@@ -38,8 +37,7 @@ export const useCandidatesModule = () => {
 
   const loadCandidates = async () => {
 
-    const rawData = await getCandidates();
-    const data = extractArray(rawData);
+    const data = await getCandidates();
 
     setAllCandidates(data);
 
@@ -78,11 +76,9 @@ export const useCandidatesModule = () => {
 
     setActiveFilter(status);
 
-    const safeAll = extractArray(allCandidates);
-
     if (status === "ALL") {
 
-      setCandidates(safeAll);
+      setCandidates(allCandidates);
 
       return;
     }
@@ -100,7 +96,7 @@ export const useCandidatesModule = () => {
     }
 
     setCandidates(
-      safeAll.filter(
+      allCandidates.filter(
         (candidate: any) =>
           statuses.includes(
             candidate.status

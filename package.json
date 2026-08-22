@@ -5,13 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.10",
-    "@rolldown/binding-linux-x64-gnu": "^1.2.4",
     "axios": "^1.16.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.16.0",

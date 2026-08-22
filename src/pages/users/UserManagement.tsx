@@ -1,6 +1,5 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useState, useMemo, useEffect } from "react";
-import { extractArray } from "../../utils/safeArray";
 import {
   registerUser,
   getUsers,
@@ -143,14 +142,12 @@ function UserManagement() {
     }
   };
 
-  const safeUsers = useMemo(() => extractArray(users), [users]);
-
   const filteredUsers = useMemo(() => {
-    return safeUsers.filter((user) => {
+    return users.filter((user) => {
       const search = searchQuery.toLowerCase();
 
       const matchesSearch =
-        (user.username || "").toLowerCase().includes(search) ||
+        user.username.toLowerCase().includes(search) ||
         (user.email || "").toLowerCase().includes(search) ||
         (user.phone || "").includes(search);
 
@@ -163,10 +160,10 @@ function UserManagement() {
 
       return matchesSearch && matchesFilter;
     });
-  }, [safeUsers, searchQuery, userFilter]);
+  }, [users, searchQuery, userFilter]);
   const displayedUsers = showAll ? filteredUsers : filteredUsers.slice(0, 10);
-  const activeCount = safeUsers.filter((u) => u.is_active).length;
-  const suspendedCount = safeUsers.filter((u) => !u.is_active).length;
+  const activeCount = users.filter((u) => u.is_active).length;
+  const suspendedCount = users.filter((u) => !u.is_active).length;
 
   useEffect(() => {
     loadUsers();
@@ -176,7 +173,7 @@ function UserManagement() {
     try {
       const data = await getUsers();
       console.log("API USERS:", data);
-      setUsers(extractArray(data));
+      setUsers(data);
     } catch (error) {
       console.error("Failed to load users", error);
     }

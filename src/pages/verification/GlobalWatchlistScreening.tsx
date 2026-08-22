@@ -1,8 +1,8 @@
 import DashboardLayout from "../../layouts/DashboardLayout";
 import BackToVerification from "../../components/verification/BackToVerification";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Clock, Database } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 // import { getPendingCandidates } from "../../api/verificationSummaryApi";
 import { useVerificationModule } from "../../hooks/useVerificationModule";
 

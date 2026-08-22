@@ -7,4 +7,5 @@ export interface Report {
   file_name: string;
   file_url: string;
   generated_at: string;
+  candidate_name?: string;
 }

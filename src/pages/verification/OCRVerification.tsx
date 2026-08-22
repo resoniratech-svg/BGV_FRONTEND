@@ -41,7 +41,7 @@ function OCRVerification() {
     .map((c: Candidate) => ({
       id: `OCR-${1000 + c.id}`,
       candidateId: c.id,
-      candidate: c.name || "Unknown",
+      candidate: c.full_name || c.name || "Unknown",
       document: "Uploaded Documents",
       accuracy: "98%",
       status: "Processing",

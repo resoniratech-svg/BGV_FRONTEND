@@ -1,10 +1,10 @@
 import axios from "./axios";
-import { extractArray } from "../utils/safeArray";
+// import api from "./axios";
 
 export const getCandidates = async () => {
   const response = await axios.get("/candidates");
 
-  return extractArray(response.data);
+  return response.data;
 };
 
 export const createCandidate = async (candidateData: unknown) => {

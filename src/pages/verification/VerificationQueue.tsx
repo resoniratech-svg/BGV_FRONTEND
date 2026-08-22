@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, ExternalLink } from "lucide-react";
 import type { Candidate } from "../../types/Candidate";
-import { extractArray } from "../../utils/safeArray";
 
 import { getCandidates } from "../../api/candidateApi";
 
@@ -20,7 +19,7 @@ interface QueueItem {
 function VerificationQueue() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [priorityFilter, setPriorityFilter] =
+  const [priorityFilter, _setPriorityFilter] =
     useState<string>("All Priorities");
 
   // Localized live cache state management
@@ -34,7 +33,7 @@ function VerificationQueue() {
     try {
       const response = await getCandidates();
 
-      setLocalCandidates(extractArray(response));
+      setLocalCandidates(response);
     } catch (error) {
       console.error(error);
     }
@@ -42,8 +41,7 @@ function VerificationQueue() {
 
   // Map candidates to Queue Items based on their workflow status
   // Only showing those that are in progress or need review
-  const safeCandidates = extractArray(localCandidates);
-  const queueData: QueueItem[] = safeCandidates
+  const queueData: QueueItem[] = localCandidates
     .filter(
       (candidate) =>
         candidate.status === "DOCUMENTS_UPLOADED" ||

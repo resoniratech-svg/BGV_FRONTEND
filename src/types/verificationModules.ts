@@ -1,4 +1,10 @@
-export const verificationModules = {
+export interface VerificationModuleDef {
+  key: string;
+  type: string;
+  subtitle?: string;
+}
+
+export const verificationModules: Record<string, VerificationModuleDef> = {
   "Resume Parsing": {
     type: "resume",
     key: "Resume Parsing",
@@ -80,4 +86,4 @@ export const verificationModules = {
     key: "Court Record",
     subtitle: "Court Record Verification",
   },
-} as const;
+};

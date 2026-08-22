@@ -15,9 +15,9 @@ import { verifySalarySlip } from "../api/salarySlipApi";
 export const salarySlipService = {
   verifySalarySlip: async (
     candidateId: number,
-    bgvId: number,
+    bgvId: string | number,
     documentId: number,
   ) => {
-    return await verifySalarySlip(candidateId, bgvId, documentId);
+    return await verifySalarySlip(candidateId, String(bgvId), documentId);
   },
 };

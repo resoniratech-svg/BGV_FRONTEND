@@ -2,7 +2,7 @@ import axios from "./axios";
 
 export const verifyFaceMatch = async (
   candidateId: number,
-  bgvId: number,
+  bgvId: string | number,
   documentId: number,
 ) => {
   const response = await axios.post("/face-match/verify", {

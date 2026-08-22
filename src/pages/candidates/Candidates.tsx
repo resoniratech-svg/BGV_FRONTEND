@@ -6,7 +6,6 @@ import { useCandidatesModule } from "../../hooks/useCandidatesModule";
 
 import {
   deleteCandidateApi,
-  updateCandidateStatusApi,
   generateCandidateLink,
 } from "../../api/candidateApi";
 
@@ -81,15 +80,11 @@ function Candidates() {
 
   // Filter candidates based on search queries and the date filters
   const filteredCandidates = candidates.filter((candidate) => {
-    const fullName = (candidate.full_name || `${candidate.first_name || ""} ${candidate.last_name || ""}`).trim();
-    const query = searchQuery.toLowerCase();
-
     const matchesSearch =
-      !query ||
-      fullName.toLowerCase().includes(query) ||
-      (candidate.email || "").toLowerCase().includes(query) ||
-      (candidate.phone || "").toLowerCase().includes(query) ||
-      String(candidate.id).includes(query);
+      candidate.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      candidate.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      candidate.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(candidate.id).includes(searchQuery);
 
     const targetTimestamp =
       activeFilter === "ALL"
@@ -108,22 +103,7 @@ function Candidates() {
     ? filteredCandidates
     : filteredCandidates.slice(0, 10);
 
-  const updateCandidateStatus = async (
-    candidateId: number,
-    nextStatus: string,
-    nextProgress: number,
-  ) => {
-    try {
-      await updateCandidateStatusApi(candidateId, {
-        status: nextStatus,
-        progress: nextProgress,
-      });
 
-      loadCandidates();
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
   const sendVerificationRequest = async (candidateId: number) => {
     try {

@@ -1,17 +1,12 @@
 
 
-interface Props{
-
-decisionValue:string;
-
-onViewResult:()=>void;
-
-onVerify:()=>void;
-
-onDecisionChange:(value:string)=>void;
-
-matchStatus:string;
-
+interface Props {
+  status?: string;
+  decisionValue: string;
+  onViewResult: () => void;
+  onVerify: () => void;
+  onDecisionChange: (value: string) => void;
+  matchStatus: string;
 }
 
 function PANVerificationCard(props:Props){

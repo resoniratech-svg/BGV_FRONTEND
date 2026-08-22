@@ -12,7 +12,7 @@ import axios from "./axios";
  * Backend:
  * POST /ccrv/verify
  */
-export const verifyCourtRecord = async (candidateId: number, bgvId: number) => {
+export const verifyCourtRecord = async (candidateId: number, bgvId: string | number) => {
   const response = await axios.post("/ccrv/verify", {
     candidate_id: candidateId,
     bgv_id: bgvId,

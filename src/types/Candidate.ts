@@ -1,3 +1,14 @@
+export interface VerificationSummary {
+  dl_status?: string;
+  driving_license_status?: string;
+  pan_status?: string;
+  aadhaar_status?: string;
+  passport_status?: string;
+  face_match_status?: string;
+  watchlist_status?: string;
+  [key: string]: string | undefined;
+}
+
 export interface Candidate {
   id: number;
   full_name: string;
@@ -6,10 +17,16 @@ export interface Candidate {
 
   status: string;
 
+  candidate_id?: string | number;
+  dob?: string;
+  gender?: string;
+  name?: string;
+  verification_summary?: VerificationSummary;
+
   first_name?: string;
   last_name?: string;
 
-  company_name?: string;   // ADD THIS
+  company_name?: string;
   bgv_id?: string;
   role?: string;
   job_role?: string;

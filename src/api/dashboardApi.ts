@@ -5,5 +5,5 @@ export const getDashboardSummary = async () => {
 
   console.log(response.data);
 
-  return response.data.data || response.data;
+  return response.data.data;
 };

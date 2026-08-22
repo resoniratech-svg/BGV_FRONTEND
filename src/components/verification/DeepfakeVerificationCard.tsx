@@ -1,4 +1,5 @@
 interface Props {
+  status?: string;
   decisionValue: string;
 
   onViewResult: () => void;

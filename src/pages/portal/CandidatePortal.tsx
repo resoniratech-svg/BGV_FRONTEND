@@ -515,7 +515,7 @@ function CandidatePortal() {
       console.log("SUBMIT DOCUMENTS RESPONSE:", response);
 
       if (response?.status === "success") {
-        await updateCandidateStatusApi(candidate.candidate_id, {
+        await updateCandidateStatusApi(Number(candidate.candidate_id || candidate.id), {
           status: "DOCUMENTS_UPLOADED",
           progress: 40,
         });

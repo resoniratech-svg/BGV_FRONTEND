@@ -16,10 +16,10 @@ function Settings() {
     username: "",
   });
 
-  const [twoFactor, setTwoFactor] = useState(true);
-  const [loginAlerts, setLoginAlerts] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [sessionTimeout, setSessionTimeout] = useState("15 mins");
+  const [_twoFactor, _setTwoFactor] = useState(true);
+  const [_loginAlerts, _setLoginAlerts] = useState(true);
+  const [_darkMode, _setDarkMode] = useState(false);
+  const [_sessionTimeout, _setSessionTimeout] = useState("15 mins");
   const [activeTab, setActiveTab] = useState("profile");
   const [currentPassword, setCurrentPassword] = useState("");
 

@@ -19,7 +19,7 @@ function CandidateDocuments() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [candidateDocuments, setCandidateDocuments] = useState<any[]>([]);
+  const [, setCandidateDocuments] = useState<any[]>([]);
 
   const [documents, setDocuments] = useState<DocumentItem[]>([
     { name: "Selfie", uploaded: false, isMandatory: true },
@@ -145,7 +145,7 @@ function CandidateDocuments() {
     window.open(url, "_blank");
   };
 
-  const verifyDocument = (index: number) => {
+  const verifyDocument = (_index: number) => {
     alert("Verification feature will be connected later.");
   };
 
